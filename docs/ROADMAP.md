@@ -97,10 +97,11 @@ Legend: ✅ done · 🔶 in progress · ⬜ not started
 - **Spec:** `docs/specs/phase-10-cicd.md`
 - **Depends on:** Phase 9.
 
-## Phase 11 — Publish — ⬜
+## Phase 11 — Publish — 🔶
 
 - **Objective:** `server-active-indicator` live on npm.
-- **Tasks:** publish `0.1.0`; GitHub release; verify unpkg/jsDelivr; dogfood; iterate to `1.0.0` once the state machine + options API is frozen.
+- **Tasks:** 🔶 initial changeset `.changeset/initial-release.md` (`minor` → `0.1.0`) with full release summary; `pnpm verify` green + `pnpm changeset status --verbose` shows `0.0.0 → 0.1.0` + dry-run `pnpm changeset version` yields `0.1.0` + `CHANGELOG.md` with `0.1.0` entry + `pnpm pack` still `dist/**` + `package.json` + `README.md` + `LICENSE` (reverted; real bump via Version Packages PR); `publint` All good!, size budgets pass. ⬜ remaining (maintainer + CI): push changeset to `main` → `release.yml` opens Version Packages PR → merge PR → `release.yml` publishes `0.1.0` via OIDC with provenance → GitHub Release/tag → verify `npm view` + provenance + `unpkg`/`jsDelivr` IIFE 200 → remove README pre-release note → dogfood `examples/demo` to published package. See `docs/specs/phase-11-publish.md` for trusted-publisher setup and post-publish checks.
+- **Spec:** `docs/specs/phase-11-publish.md`
 - **Depends on:** Phase 10.
 
 ## Phase 12 — Portfolio integration — ⬜
