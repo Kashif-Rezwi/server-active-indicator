@@ -64,10 +64,12 @@ Legend: ✅ done · 🔶 in progress · ⬜ not started
 - **Validation:** ✅ 105 tests pass (was 67, +38); `src/core/` coverage 97.52% lines / 91.66% branches / 100% functions (gate 90/85); `check.ts` 100% across the board; `pnpm verify` exits 0 with the coverage gate enforced; bundle sizes unchanged from Phase 5 (core 2.94 KB gzip ESM, react 6.04 KB gzip ESM); `pnpm fixture:sleep-server` confirmed: first `/health` sleeps, subsequent are instant, `POST /reset` re-arms; no new runtime dependencies (express, tsx, @types/express are devDeps only); public API and state-machine unchanged.
 - **Spec:** `docs/specs/phase-6-testing-hardening.md`
 
-## Phase 7 — Documentation — ⬜
+## Phase 7 — Documentation — ✅
 
 - **Objective:** README good enough for a recruiter to understand the value in minutes.
-- **Tasks:** demo-first README (with/without GIF); 3-line quick start; platform guides (Render `healthCheckPath`, Railway 502 caveat, Fly `min_machines_running`); minimal `/health` backend recipes (Express/NestJS/Fastify) with CORS guidance; headless usage; API reference; FAQ incl. "can it detect sleeping? (No — and why that's honest)"; troubleshooting.
+- **Tasks:** demo-first README (placeholder GIF slot for Phase 8); 3-line quick start (React + vanilla); 5-state "how it works" table; platform guides (Render `healthCheckPath`, Railway 502-on-wake caveat, Fly `min_machines_running = 0` default, Koyeb scale-to-zero); minimal `/health` backend recipes (Express/Fastify/NestJS) with CORS guidance; headless usage incl. custom `check` + `key` caveat and CDN/IIFE; full API reference (`Monitor` handle, all 15 `MonitorConfig` options, `MonitorSnapshot` fields, React exports); FAQ incl. "can it detect sleeping? (No — and why that's honest)"; troubleshooting (CORS, capture-on-mount, offlineAfter, custom-check sharing, moduleResolution).
+- **Validation:** ✅ every documented option/prop/method cross-checked against `src/` exports and `DEFAULT_CONFIG`; copy reviewed against honesty constraint (no `sleeping` state claims; UI copy says "starting up"); stale Phase 0 status table removed; `pnpm verify` green.
+- **Spec:** `docs/specs/phase-7-documentation.md`
 - **Depends on:** Phase 5 (documents real API).
 
 ## Phase 8 — Demo application — ⬜
