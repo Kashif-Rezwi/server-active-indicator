@@ -48,12 +48,13 @@ Legend: ✅ done · 🔶 in progress · ⬜ not started
 - **Validation:** ✅ 46 tests green (12 hook/provider via `renderHook` incl. StrictMode — exactly one engine after mount, one fetch per poll tick, zero engines after unmount; 5 legacy-shim; 29 core from Phases 2–3); `pnpm verify` green; `src/react/` coverage **100% lines / 94% branch**; `dist/react/index.{js,cjs}` begin with `'use client'` while core output stays clean; react adapter adds ≈0.7 KB gzip on top of the 2.9 KB core (budget: <2 KB layer / <3 KB core).
 - **Depends on:** Phase 3. **Spec:** `docs/specs/phase-4-react-layer.md`
 
-## Phase 5 — Default UI — ⬜
+## Phase 5 — Default UI — ✅
 
 - **Objective:** polished default presentation + headless escape hatch.
-- **Tasks:** `<ServerStatus>` banner + `variant="pill"`; injected prefixed CSS (`sai-*`) + CSS custom properties for theming; elapsed-time counter; offline retry button; `role="status"`/`aria-live="polite"`; `prefers-reduced-motion`; i18n `messages` prop; silence-on-success default.
-- **Validation:** RTL + axe tests (no violations); 320px viewport check.
-- **Depends on:** Phase 4.
+- **Tasks:** ✅ `<ServerStatus>` banner + `variant="pill"`; injected prefixed CSS (`sai-*`) + CSS custom properties for theming; elapsed-time counter; offline retry button; `role="status"`/`aria-live="polite"`; `prefers-reduced-motion`; i18n `messages` prop; silence-on-success default.
+- **Decisions captured in spec:** dismissal lives in the component (engine stays truthful per Phase 2 — `wasCold` is the sanctioned signal); stylesheet injected in a `useEffect` with element-`id` idempotency (SSR-safe, tree-shake-safe, one tag across instances/StrictMode/remounts); CSS custom properties default to a light palette, flipped via `prefers-color-scheme: dark`; `sai-elapsed` counter is `aria-hidden` (per-second live-region changes would spam screen readers); render prop receives the raw snapshot (incl. `unknown`) and skips stylesheet injection entirely.
+- **Validation:** ✅ 21 ServerStatus tests (RTL + axe-core, zero violations across waking/active/offline/browser-offline/pill) + 46 prior tests green; `pnpm verify` green; `dist/react/index.js` 6.04 KB gzip (delta over Phase 4: 2.39 KB gzip — the 2 KB layer _delta_ budget slips by ~0.4 KB primarily because the injected stylesheet carries 3 named color tokens × light/dark × 3 states plus motion/transition rules; the absolute core stays under 3 KB gzip).
+- **Depends on:** Phase 4. **Spec:** `docs/specs/phase-5-default-ui.md`
 
 ## Phase 6 — Testing hardening — ⬜
 

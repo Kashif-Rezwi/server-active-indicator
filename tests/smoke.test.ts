@@ -24,14 +24,11 @@ describe("package entries", () => {
     expect(() => createMonitor({})).toThrow(/healthUrl.*check/);
   });
 
-  it("react entry exposes the public API (hook + provider live; UI lands in Phase 5)", () => {
+  it("react entry exposes the public API (hook + provider + default UI)", () => {
     expect(typeof useServerStatus).toBe("function");
     expect(typeof ServerStatusProvider).toBe("function");
     expect(typeof ServerStatus).toBe("function");
-    // The hook is a React hook — its behavior is covered by
-    // tests/use-server-status.test.tsx under React Testing Library.
-    expect(() => ServerStatus({ healthUrl: "https://example.com/health" })).toThrow(
-      /not implemented yet \(Phase 5\)/,
-    );
+    // Behavior is covered by tests/use-server-status.test.tsx and
+    // tests/server-status.test.tsx under React Testing Library.
   });
 });

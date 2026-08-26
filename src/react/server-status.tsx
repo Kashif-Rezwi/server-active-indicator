@@ -1,5 +1,11 @@
+import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
+
+import { DEFAULT_CONFIG } from "../core/defaults";
 import type { MonitorConfig, MonitorSnapshot } from "../core/types";
+import { CheckIcon, OfflineIcon, SpinnerIcon, WifiOffIcon } from "./icons";
+import { injectServerStatusStyles } from "./styles";
+import { useServerStatus } from "./use-server-status";
 
 export interface ServerStatusMessages {
   waking?: string;
@@ -20,12 +26,130 @@ export interface ServerStatusProps extends MonitorConfig {
   children?: (snapshot: MonitorSnapshot & { refresh: () => void }) => ReactNode;
 }
 
+/** Locked English defaults — research §5 copy for `waking` (never "asleep"). */
+const DEFAULT_MESSAGES: Required<ServerStatusMessages> = {
+  waking: "The server is starting up — this can take up to a minute on first visit.",
+  active: "The server is ready.",
+  offline: "The server appears to be unavailable.",
+  browserOffline: "You appear to be offline — check your connection.",
+  retry: "Retry",
+};
+
+/** Language-neutral elapsed readout: `45s` under a minute, then `1m 5s` (dossier parity). */
+function formatElapsed(seconds: number): string {
+  if (seconds < 60) return `${seconds}s`;
+  return `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
+}
+
 /**
- * Default UI for the server status monitor (banner / pill variants).
+ * Default UI for the server status monitor.
  *
- * Implemented in Phase 5 — injected `sai-`-prefixed CSS, CSS custom properties
- * for theming, `role="status"` + `aria-live="polite"`, elapsed counter, retry.
+ * - `variant="banner"` (default): full-width strip; `variant="pill"`: compact pill.
+ * - Silence on success: nothing renders for `unknown`/`checking` or a warm `active`
+ *   (`wasCold=false`). After a `waking` episode the green confirmation shows and
+ *   auto-hides after `successDisplayMs`; it re-arms if the server re-sleeps.
+ * - `waking`: amber "starting up" copy + live elapsed counter (the counter is
+ *   `aria-hidden` — per-second live-region changes would spam screen readers).
+ * - `offline`: red banner with a Retry button (`refresh()`); when the browser
+ *   itself is offline (`offlineKind`) that gets its own message.
+ * - Styling: injected `sai-`-prefixed CSS, themeable via `--sai-*` custom
+ *   properties (light/dark via `prefers-color-scheme`); motion honors
+ *   `prefers-reduced-motion`; state announced via `role="status"` +
+ *   `aria-live="polite"`.
+ * - `children` render prop replaces the default UI entirely (no stylesheet is
+ *   injected then); it receives the raw snapshot plus `refresh`.
+ *
+ * A `healthUrl`/`check` prop creates the component's own monitor (config captured
+ * on mount, as with `useServerStatus`); without a check source the nearest
+ * `<ServerStatusProvider>`'s monitor is used.
  */
-export function ServerStatus(_props: ServerStatusProps): ReactNode {
-  throw new Error("server-active-indicator: <ServerStatus> is not implemented yet (Phase 5)");
+export function ServerStatus(props: ServerStatusProps): ReactNode {
+  const { variant = "banner", messages, className, children, ...config } = props;
+
+  // A check source on the props means "own monitor"; without one, read the
+  // nearest provider (the hook throws its usage error if that's missing too).
+  const hasCheckSource = config.healthUrl !== undefined || config.check !== undefined;
+  const snapshot = useServerStatus(hasCheckSource ? config : undefined);
+  const usesDefaultUi = children === undefined;
+
+  // Stylesheet for the default UI: injected once per document (effect-only, so
+  // SSR-safe), skipped for render-prop usage where we render no sai- markup.
+  useEffect(() => {
+    if (usesDefaultUi) injectServerStatusStyles();
+  }, [usesDefaultUi]);
+
+  // Silence-on-success presentation policy (the engine stays truthful — see
+  // docs/specs/phase-2-extract-generalize.md): the confirmation shows only after
+  // a `waking`/`offline` episode this instance has witnessed, then auto-hides
+  // after `successDisplayMs`. A consumer that mounts *into* an already-`active`
+  // monitor has not witnessed any cold start → it stays silent.
+  const [dismissed, setDismissed] = useState(true);
+  const hasSeenWakeOrOfflineRef = useRef(false);
+
+  // A new wake episode re-arms the confirmation (re-sleep recovery re-announces).
+  useEffect(() => {
+    if (snapshot.status === "waking" || snapshot.status === "offline") {
+      hasSeenWakeOrOfflineRef.current = true;
+      setDismissed(false);
+    }
+  }, [snapshot.status]);
+
+  const successDisplayMs = config.successDisplayMs ?? DEFAULT_CONFIG.successDisplayMs;
+
+  useEffect(() => {
+    if (snapshot.status !== "active" || !snapshot.wasCold || dismissed) return;
+    if (!hasSeenWakeOrOfflineRef.current) return; // late-mounter; never saw the wake
+    const timer = setTimeout(() => setDismissed(true), successDisplayMs);
+    return () => clearTimeout(timer);
+  }, [snapshot.status, snapshot.wasCold, dismissed, successDisplayMs]);
+
+  // Headless escape hatch: full delegation, raw snapshot (including `unknown`).
+  if (!usesDefaultUi) return children(snapshot);
+
+  // Silence: nothing before the reveal; nothing for a warm success.
+  if (snapshot.status === "unknown" || snapshot.status === "checking") return null;
+  if (snapshot.status === "active" && (!snapshot.wasCold || dismissed)) return null;
+
+  const copy: Required<ServerStatusMessages> = { ...DEFAULT_MESSAGES, ...messages };
+  const rootClass = variant === "pill" ? "sai-pill" : "sai-banner";
+  const { status, offlineKind, elapsedSeconds, refresh } = snapshot;
+
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      data-state={status}
+      data-offline-kind={offlineKind}
+      className={className ? `${rootClass} ${className}` : rootClass}
+    >
+      {status === "waking" ? (
+        <SpinnerIcon />
+      ) : status === "active" ? (
+        <CheckIcon />
+      ) : offlineKind === "browser" ? (
+        <WifiOffIcon />
+      ) : (
+        <OfflineIcon />
+      )}
+      <span className="sai-message">
+        {status === "waking"
+          ? copy.waking
+          : status === "active"
+            ? copy.active
+            : offlineKind === "browser"
+              ? copy.browserOffline
+              : copy.offline}
+      </span>
+      {status === "waking" && (
+        <span className="sai-elapsed" aria-hidden="true">
+          {formatElapsed(elapsedSeconds)}
+        </span>
+      )}
+      {status === "offline" && (
+        <button type="button" className="sai-retry" onClick={refresh}>
+          {copy.retry}
+        </button>
+      )}
+    </div>
+  );
 }
