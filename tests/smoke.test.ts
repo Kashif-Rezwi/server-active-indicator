@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { DEFAULT_CONFIG, createMonitor } from "../src/index";
-import { ServerStatus, useServerStatus } from "../src/react/index";
+import { ServerStatus, ServerStatusProvider, useServerStatus } from "../src/react/index";
 
 describe("package entries", () => {
   it("core entry exposes the locked defaults", () => {
@@ -24,11 +24,14 @@ describe("package entries", () => {
     expect(() => createMonitor({})).toThrow(/healthUrl.*check/);
   });
 
-  it("react entry exposes the public API (stubs until Phases 4–5)", () => {
+  it("react entry exposes the public API (hook + provider live; UI lands in Phase 5)", () => {
     expect(typeof useServerStatus).toBe("function");
+    expect(typeof ServerStatusProvider).toBe("function");
     expect(typeof ServerStatus).toBe("function");
-    expect(() => useServerStatus({ healthUrl: "https://example.com/health" })).toThrow(
-      /not implemented yet \(Phase 4\)/,
+    // The hook is a React hook — its behavior is covered by
+    // tests/use-server-status.test.tsx under React Testing Library.
+    expect(() => ServerStatus({ healthUrl: "https://example.com/health" })).toThrow(
+      /not implemented yet \(Phase 5\)/,
     );
   });
 });

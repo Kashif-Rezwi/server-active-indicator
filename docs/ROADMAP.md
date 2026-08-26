@@ -41,12 +41,12 @@ Legend: ✅ done · 🔶 in progress · ⬜ not started
 - **Validation:** ✅ 29 tests green (12 monitor transitions + 6 registry dedup/refcount + 8 phase-3 policy tests + 3 smoke); `pnpm verify` green; `src/core/` line coverage **93%** (engine 95%, registry 95%; `types.ts` is type-only). Hard ≥90% threshold deferred to Phase 6 per plan.
 - **Depends on:** Phase 2. **Spec:** `docs/specs/phase-3-core-engine.md`
 
-## Phase 4 — React layer — ⬜
+## Phase 4 — React layer — ✅
 
 - **Objective:** thin, correct React binding.
-- **Tasks:** `useServerStatus()` via `useSyncExternalStore`; optional `ServerStatusProvider`; `'use client'` compatibility; StrictMode double-effect safety; `refresh()` manual trigger; full cleanup on unmount.
-- **Validation:** `renderHook` tests; no duplicate polling under StrictMode.
-- **Depends on:** Phase 3.
+- **Tasks:** ✅ `useServerStatus(options?)` via `useSyncExternalStore` — monitor created in an effect, never during render (concurrent-safe; first commit honestly renders `unknown`); optional `ServerStatusProvider` (context distinguishes _no provider_ from _monitor pending_ → SSR-safe, no false throws); `'use client'` via a tsup banner on the react entry only; StrictMode double-effect safety; `refresh()` manual trigger; full cleanup on unmount; React 17 support via an internal `useSyncExternalStore` fallback (no new deps — locked `^17` peer range preserved); options captured on mount with the `key`-prop escape hatch.
+- **Validation:** ✅ 46 tests green (12 hook/provider via `renderHook` incl. StrictMode — exactly one engine after mount, one fetch per poll tick, zero engines after unmount; 5 legacy-shim; 29 core from Phases 2–3); `pnpm verify` green; `src/react/` coverage **100% lines / 94% branch**; `dist/react/index.{js,cjs}` begin with `'use client'` while core output stays clean; react adapter adds ≈0.7 KB gzip on top of the 2.9 KB core (budget: <2 KB layer / <3 KB core).
+- **Depends on:** Phase 3. **Spec:** `docs/specs/phase-4-react-layer.md`
 
 ## Phase 5 — Default UI — ⬜
 

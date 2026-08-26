@@ -1,11 +1,9 @@
 import { defineConfig } from "tsup";
 
 const shared = {
-  entry: ["src/index.ts", "src/react/index.ts"],
   format: ["esm", "cjs"],
   dts: true,
   sourcemap: true,
-  clean: true,
   external: ["react", "react-dom", "react/jsx-runtime"],
   outExtension({ format }) {
     return { js: format === "cjs" ? ".cjs" : ".js" };
@@ -13,7 +11,21 @@ const shared = {
 } satisfies Parameters<typeof defineConfig>[0];
 
 export default defineConfig([
-  shared,
+  {
+    ...shared,
+    entry: { index: "src/index.ts" },
+    clean: true,
+  },
+  {
+    ...shared,
+    entry: { "react/index": "src/react/index.ts" },
+    // Next.js App Router client-boundary directive. Applied to the React subpath
+    // only — the framework-free core must not carry a client directive. The banner
+    // guarantees the directive is the first statement of both the ESM and CJS
+    // outputs regardless of bundler directive handling.
+    banner: { js: '"use client"' },
+    clean: false,
+  },
   {
     entry: { "server-active-indicator.iife": "src/index.ts" },
     format: ["iife"],
