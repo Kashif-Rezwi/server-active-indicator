@@ -62,4 +62,11 @@ export interface MonitorSnapshot {
   lastCheckedAt: number | null;
   /** Number of attempts made in the current episode. */
   attempts: number;
+  /** Whether the current episode passed through `waking`. Drives the "recovery
+   *  confirmation only after a cold start, silence on warm start" UI policy. */
+  wasCold: boolean;
+  /** Latency of the last completed attempt in ms, or null before the first one. */
+  lastLatencyMs: number | null;
+  /** Distinguishes "backend unreachable" from "the browser itself is offline". */
+  offlineKind?: "server" | "browser";
 }

@@ -24,12 +24,14 @@ Legend: ✅ done · 🔶 in progress · ⬜ not started
 - **Validation:** ✅ `pnpm verify` green (format→lint→typecheck→3 tests→build); `pnpm pack` tarball = dist + README + LICENSE only; built core imports from Node ESM and CJS without react resolvable.
 - **Spec:** `docs/specs/phase-1-scaffold.md`
 
-## Phase 2 — Extract & generalize — ⬜
+## Phase 2 — Extract & generalize — ✅
 
 - **Objective:** port the proven "Server Wakeup" semantics from `code-review-agent` into framework-free core TypeScript.
-- **Tasks:** parameterize config (no app imports); rename hardcoded values to configurable options with the existing values as defaults (3s reveal, 5s poll, 2.5s success display); define `MonitorConfig`/`CheckResult` types.
-- **Output:** `src/core/` compiling standalone; behavior-parity notes vs. dossier §12.
-- **Depends on:** Phase 1.
+- **Tasks:** parameterized config (no app imports); renamed hardcoded values to configurable options with the existing values as defaults (3s reveal, 5s poll, 2.5s success display); defined `MonitorConfig`/`CheckResult` types.
+- **Output:** `src/core/` (`check.ts` fetch strategy + reason classification, `monitor.ts` engine) compiling standalone; behavior-parity notes in the spec.
+- **Extra decisions captured in spec:** warm first ping resolves to `active` with `wasCold=false` (recovery-only confirmation moved to a UI presentation policy, keeping the engine truthful); snapshot extended with `wasCold`, `lastLatencyMs`, `offlineKind`.
+- **Validation:** ✅ 12 monitor tests + 3 smoke tests green (warm ping, cold start, reveal threshold, 4xx fast-path, Railway 502-on-wake, offlineAfter bound, browser-offline, refresh-from-offline, destroy mid-flight, custom `check()`); `pnpm verify` green.
+- **Depends on:** Phase 1. **Spec:** `docs/specs/phase-2-extract-generalize.md`
 
 ## Phase 3 — Core state engine — ⬜
 

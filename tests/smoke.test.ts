@@ -16,11 +16,10 @@ describe("package entries", () => {
     });
   });
 
-  it("core entry exposes createMonitor (stub until Phase 3)", () => {
+  it("core entry exposes createMonitor (implemented in Phase 2)", () => {
     expect(typeof createMonitor).toBe("function");
-    expect(() => createMonitor({ healthUrl: "https://example.com/health" })).toThrow(
-      /not implemented yet \(Phase 3\)/,
-    );
+    // Requires a check source; validated for real in tests/monitor.test.ts.
+    expect(() => createMonitor({})).toThrow(/healthUrl.*check/);
   });
 
   it("react entry exposes the public API (stubs until Phases 4–5)", () => {
