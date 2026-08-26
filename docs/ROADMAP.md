@@ -72,10 +72,13 @@ Legend: ✅ done · 🔶 in progress · ⬜ not started
 - **Spec:** `docs/specs/phase-7-documentation.md`
 - **Depends on:** Phase 5 (documents real API).
 
-## Phase 8 — Demo application — ⬜
+## Phase 8 — Demo application — ✅
 
 - **Objective:** live proof of the real cold-start experience.
-- **Tasks:** Vite React frontend on static hosting + Render free-tier API that genuinely sleeps; capture README GIF.
+- **Tasks:** ✅ deployable demo API (`examples/demo-server/` — Express, real CORS incl. preflight, `GET /health` + `GET /api/message` sharing the cold start, `POST /reset` re-arm, `ALLOWED_ORIGIN`/`SLEEP_MS`/`PORT` env, `render.yaml` blueprint with `healthCheckPath: /health`, deploy README); ✅ Vite + React demo frontend (`examples/demo/` — `ServerStatusProvider` + banner, pill variant, app-level data-fetch card showing cold-start latency, "simulate idle timeout" re-arm button, `VITE_API_URL` env); ✅ demo READMEs (local run, Render + static-host deploy steps, GIF recording guide).
+- **Decisions captured in spec:** demo is **not** a pnpm workspace package (locked decision 1) — `examples/demo/pnpm-workspace.yaml` (package-less, with `allowBuilds` for esbuild) makes it its own pnpm project root; local dev dogfoods the library via vite `resolve.alias` + tsconfig `paths` to `../../src` (published-package swap documented for post-Phase 11); new `demo-server/` rather than extending the Phase 6 test fixture (CORS + demo routes stay out of the integration-test surface); `SLEEP_MS` default 20s for demo pacing (Render's real ~60s cold start adds on top).
+- **Validation:** ✅ demo-server curl matrix (3s cold → instant → CORS + preflight 204 → `POST /reset` → 3s again); demo app `pnpm install` / `typecheck` / `build` green (bundle 68.85 KB gzip with source-aliased library); root `pnpm verify` green, `src/` and test gates untouched. **Remaining (external, maintainer):** deploy API to Render → deploy frontend to static host → record GIF → swap `docs/assets/demo-placeholder.gif` → `demo.gif` + live link in README (checklist in `examples/demo/README.md`).
+- **Spec:** `docs/specs/phase-8-demo-application.md`
 - **Depends on:** Phases 5, 7.
 
 ## Phase 9 — Packaging — ⬜

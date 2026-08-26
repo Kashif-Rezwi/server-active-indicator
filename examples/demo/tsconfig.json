@@ -7,19 +7,19 @@
     "jsx": "react-jsx",
     "strict": true,
     "noUncheckedIndexedAccess": true,
-    "noImplicitOverride": true,
     "noFallthroughCasesInSwitch": true,
     "isolatedModules": true,
     "verbatimModuleSyntax": true,
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
-    "noEmit": true
+    "useDefineForClassFields": true,
+    "noEmit": true,
+    "types": ["vite/client", "node"],
+    "paths": {
+      "server-active-indicator/react": ["../../src/react/index.ts"],
+      "server-active-indicator": ["../../src/index.ts"]
+    }
   },
-  "include": ["src", "tests", "examples", "vitest.config.ts", "tsup.config.ts", "eslint.config.js"],
-  "exclude": [
-    // The demo frontend is its own project (own tsconfig + install, aliased
-    // to src/) — typecheck it with `pnpm --dir examples/demo typecheck`.
-    "examples/demo"
-  ]
+  "include": ["src", "vite.config.ts"]
 }

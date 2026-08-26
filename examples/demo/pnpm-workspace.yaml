@@ -1,0 +1,7 @@
+# Intentionally package-less: marks the demo as its own pnpm project
+# root, separate from the library repo (locked decision 1: no monorepo
+# tooling). Also carries this project's build-script approvals.
+allowBuilds:
+  esbuild: true
+onlyBuiltDependencies:
+  - esbuild

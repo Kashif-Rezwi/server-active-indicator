@@ -1,0 +1,26 @@
+# Render blueprint for the Phase 8 demo API.
+# Deploy: Render dashboard → New → Blueprint → point at this repo (or copy this
+# file to the repo root if deploying from a fork without blueprint support).
+#
+# The free plan sleeps after 15 min without inbound traffic and wakes in ~1 min
+# — which is exactly the behavior the demo exists to show.
+services:
+  - type: web
+    name: sai-demo-api
+    runtime: node
+    plan: free
+    rootDir: .
+    # tsx runs the TypeScript server directly; both are devDependencies of the
+    # repo (the demo server is a devDependency-only example).
+    buildCommand: pnpm install --frozen-lockfile
+    startCommand: node --import tsx examples/demo-server/run.ts
+    # The same /health the indicator pings doubles as Render's health check
+    # (zero-downtime deploys + auto-restart for free).
+    healthCheckPath: /health
+    envVars:
+      - key: SLEEP_MS
+        value: "20000" # demo-friendly wake; real cold start adds its own delay
+      - key: ALLOWED_ORIGIN
+        value: "*" # tighten to your frontend origin after deploying it
+      - key: HOST
+        value: "0.0.0.0"
