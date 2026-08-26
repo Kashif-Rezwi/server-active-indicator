@@ -89,10 +89,12 @@ Legend: ✅ done · 🔶 in progress · ⬜ not started
 - **Spec:** `docs/specs/phase-9-packaging.md`
 - **Depends on:** Phase 6.
 
-## Phase 10 — CI/CD — ⬜
+## Phase 10 — CI/CD — ✅
 
 - **Objective:** safe, automated releases.
-- **Tasks:** PR workflow (lint → typecheck → test → build); release workflow with changesets + npm OIDC trusted publishing + provenance attestation.
+- **Tasks:** ✅ PR workflow (`.github/workflows/ci.yml` — `pull_request`→`main` + `push`→`main`, `contents: read`, concurrency cancel, pnpm 11 + Node 22, `pnpm install --frozen-lockfile` → `pnpm verify`); ✅ release workflow (`.github/workflows/release.yml` — `push`→`main` only, `contents: write` + `pull-requests: write` + `id-token: write`, `changesets/action@v1` with `version: pnpm changeset version` / `publish: pnpm publish --provenance`, `registry-url` for OIDC, no `NPM_TOKEN`); ✅ `publishConfig.provenance: true` (defense-in-depth; workflow also passes `--provenance`).
+- **Validation:** ✅ `pnpm verify` green (format→lint→typecheck→test:coverage 96% lines / 93% branches (gate 90/85 on `src/core/**`) →build→size (core 2.86 KB / react 5.90 KB / IIFE 2.23 KB gzip) →lint:pkg All good!); `pnpm pack` still `dist/**` + `package.json` + `README.md` + `LICENSE`; workflows are pinned majors (`checkout@v4`, `pnpm/action-setup@v4`, `setup-node@v4`, `changesets/action@v1`) and pass structural checks (PR triggers, least-privilege permissions, frozen lockfile, OIDC fields). Manual follow-ups remain: enable npm trusted publishing on npmjs.org for `release.yml`, and require `CI / verify` in branch protection.
+- **Spec:** `docs/specs/phase-10-cicd.md`
 - **Depends on:** Phase 9.
 
 ## Phase 11 — Publish — ⬜
