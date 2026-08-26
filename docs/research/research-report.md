@@ -24,14 +24,14 @@ state to the user inside the app.
 
 ## 2. Platform behavior (verified from official docs, 2026-08-26)
 
-| Platform | Sleeps? | Idle trigger | Wake behavior | Indicator useful? |
-|---|---|---|---|---|
-| **Render** (Free web services) | ✅ after **15 min** without inbound traffic | inbound HTTP/WebSocket only | next inbound request spins it up; takes **~1 minute**; Render shows a loading page to navigating browsers only; `/robots.txt` answered by platform without waking | **Primary target** |
-| **Railway** ("Serverless", opt-in, formerly App Sleeping) | ✅ after **10 min** with no **outbound** packets (incl. DB pools, telemetry) | first inbound request wakes it | "cold boot time"; **first request may return 502 Bad Gateway** | Yes — must tolerate 502-on-wake |
-| **Fly.io** | ✅ `auto_stop_machines` + `min_machines_running = 0` is the `fly launch` **default** | Fly Proxy stops/suspends idle machines | Fly Proxy autostarts on incoming requests; `suspend` resumes faster than `stop` | Yes |
-| **Koyeb** | ✅ Scale-to-Zero feature (free instance: 512MB / 0.1 vCPU) | no incoming traffic | microVM cold start on traffic | Yes |
-| **Vercel / Netlify** | serverless function cold starts (Lambda-style) | per-function idle | typically sub-second to low-seconds | Marginal |
-| **Cloudflare Workers** | V8 isolates, ~100× faster startup than containers | — | negligible cold start | No |
+| Platform                                                  | Sleeps?                                                                              | Idle trigger                           | Wake behavior                                                                                                                                                     | Indicator useful?               |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------------ | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------- |
+| **Render** (Free web services)                            | ✅ after **15 min** without inbound traffic                                          | inbound HTTP/WebSocket only            | next inbound request spins it up; takes **~1 minute**; Render shows a loading page to navigating browsers only; `/robots.txt` answered by platform without waking | **Primary target**              |
+| **Railway** ("Serverless", opt-in, formerly App Sleeping) | ✅ after **10 min** with no **outbound** packets (incl. DB pools, telemetry)         | first inbound request wakes it         | "cold boot time"; **first request may return 502 Bad Gateway**                                                                                                    | Yes — must tolerate 502-on-wake |
+| **Fly.io**                                                | ✅ `auto_stop_machines` + `min_machines_running = 0` is the `fly launch` **default** | Fly Proxy stops/suspends idle machines | Fly Proxy autostarts on incoming requests; `suspend` resumes faster than `stop`                                                                                   | Yes                             |
+| **Koyeb**                                                 | ✅ Scale-to-Zero feature (free instance: 512MB / 0.1 vCPU)                           | no incoming traffic                    | microVM cold start on traffic                                                                                                                                     | Yes                             |
+| **Vercel / Netlify**                                      | serverless function cold starts (Lambda-style)                                       | per-function idle                      | typically sub-second to low-seconds                                                                                                                               | Marginal                        |
+| **Cloudflare Workers**                                    | V8 isolates, ~100× faster startup than containers                                    | —                                      | negligible cold start                                                                                                                                             | No                              |
 
 Platform features usable by this package **[verified]**:
 
@@ -39,7 +39,7 @@ Platform features usable by this package **[verified]**:
   healthy, 5s probe timeout. The same `/health` endpoint the indicator pings can be
   registered there (zero-downtime deploys + auto-restart for free).
 - **Inbound traffic is the wake signal** on Render, Railway, Fly, and Koyeb — the
-  indicator's ping is not passive monitoring, it *is* the wake-up call.
+  indicator's ping is not passive monitoring, it _is_ the wake-up call.
 - Render's own uptime best-practices doc recommends external probes and client-side
   retry logic — this package formalizes exactly that.
 
@@ -78,15 +78,15 @@ offline → checking → active           (manual retry)
 active  → checking → waking           (re-check detects re-sleep)
 ```
 
-| State | UI |
-|---|---|
-| `unknown` | render nothing |
+| State      | UI                                                                 |
+| ---------- | ------------------------------------------------------------------ |
+| `unknown`  | render nothing                                                     |
 | `checking` | render nothing until `revealDelay` (3s default) elapses unresolved |
-| `waking` | amber: "The server is starting up… (12s)" |
-| `active` | green confirmation for `successDisplayMs` (2.5s), then auto-hide |
-| `offline` | red: "appears to be unavailable" + retry button |
+| `waking`   | amber: "The server is starting up… (12s)"                          |
+| `active`   | green confirmation for `successDisplayMs` (2.5s), then auto-hide   |
+| `offline`  | red: "appears to be unavailable" + retry button                    |
 
-**Cut states and why:** `sleeping` is *undetectable* from a browser; `timeout`/`error`
+**Cut states and why:** `sleeping` is _undetectable_ from a browser; `timeout`/`error`
 are inputs to the machine, not user-facing states; `degraded` is deferred to an opt-in
 response-validation contract, not a core state.
 
@@ -137,36 +137,36 @@ React/react-dom are **peer dependencies** (`^17 || ^18 || ^19`). Works in Next.j
 
 Required: `healthUrl` (or `check`). Everything else defaulted:
 
-| Option | Default | Notes |
-|---|---|---|
-| `timeout` | `10_000` | per-attempt ceiling (Render spin-up is ~60s; don't conflate with reveal) |
-| `revealDelay` | `3_000` | show `waking` only if unresolved this long (proven value from dossier) |
-| `pollInterval` | `5_000` | while `waking` (proven value) |
-| `offlineAfter` | `60_000` elapsed | bound on `waking` before declaring `offline` |
-| `retryBackoff` | 1.5×, cap 15s, jittered | applies after repeated failures |
-| `successDisplayMs` | `2_500` | green confirmation duration (proven value) |
-| `activeCheckInterval` | `0` (off) | opt-in re-sleep detection |
-| `pauseWhenHidden` | `true` | `document.visibilitychange` |
-| `headers` / `credentials` | none | explicit opt-in only |
-| `validate` | — | `(res: Response) => boolean` for body/degraded inspection |
-| `onStatusChange` / `onActive` / `onOffline` | — | callbacks |
-| `storageKey` | — | opt-in `sessionStorage` cache (not localStorage — staleness) |
-| UI: `variant`, `position`, `messages`, `className`, theme CSS vars | — | |
+| Option                                                             | Default                 | Notes                                                                    |
+| ------------------------------------------------------------------ | ----------------------- | ------------------------------------------------------------------------ |
+| `timeout`                                                          | `10_000`                | per-attempt ceiling (Render spin-up is ~60s; don't conflate with reveal) |
+| `revealDelay`                                                      | `3_000`                 | show `waking` only if unresolved this long (proven value from dossier)   |
+| `pollInterval`                                                     | `5_000`                 | while `waking` (proven value)                                            |
+| `offlineAfter`                                                     | `60_000` elapsed        | bound on `waking` before declaring `offline`                             |
+| `retryBackoff`                                                     | 1.5×, cap 15s, jittered | applies after repeated failures                                          |
+| `successDisplayMs`                                                 | `2_500`                 | green confirmation duration (proven value)                               |
+| `activeCheckInterval`                                              | `0` (off)               | opt-in re-sleep detection                                                |
+| `pauseWhenHidden`                                                  | `true`                  | `document.visibilitychange`                                              |
+| `headers` / `credentials`                                          | none                    | explicit opt-in only                                                     |
+| `validate`                                                         | —                       | `(res: Response) => boolean` for body/degraded inspection                |
+| `onStatusChange` / `onActive` / `onOffline`                        | —                       | callbacks                                                                |
+| `storageKey`                                                       | —                       | opt-in `sessionStorage` cache (not localStorage — staleness)             |
+| UI: `variant`, `position`, `messages`, `className`, theme CSS vars | —                       |                                                                          |
 
 DX target: install → `<ServerStatus healthUrl="…" />` working in under 3 minutes.
 
 ## 9. Error → state mapping — [decision]
 
-| Condition | State |
-|---|---|
-| 2xx within threshold | `active` |
-| 2xx slower than `revealDelay` | `waking` during wait → `active` |
-| timeout / DNS / refused / CORS block | `waking` (reason set) → `offline` after `offlineAfter` |
-| HTTP 5xx (incl. Railway 502-on-wake **[verified]**) | `waking` → `offline` after `offlineAfter` |
-| HTTP 4xx on health endpoint | fast path to `offline` (`reason: 'http-error'`) — won't fix itself by waking |
-| `navigator.onLine === false` | `offline` with distinct "you appear to be offline" message |
-| malformed body | ignored by default (body not parsed) |
-| abort (unmount/navigation) | cleanup only, no state change |
+| Condition                                           | State                                                                        |
+| --------------------------------------------------- | ---------------------------------------------------------------------------- |
+| 2xx within threshold                                | `active`                                                                     |
+| 2xx slower than `revealDelay`                       | `waking` during wait → `active`                                              |
+| timeout / DNS / refused / CORS block                | `waking` (reason set) → `offline` after `offlineAfter`                       |
+| HTTP 5xx (incl. Railway 502-on-wake **[verified]**) | `waking` → `offline` after `offlineAfter`                                    |
+| HTTP 4xx on health endpoint                         | fast path to `offline` (`reason: 'http-error'`) — won't fix itself by waking |
+| `navigator.onLine === false`                        | `offline` with distinct "you appear to be offline" message                   |
+| malformed body                                      | ignored by default (body not parsed)                                         |
+| abort (unmount/navigation)                          | cleanup only, no state change                                                |
 
 ## 10. Performance — [decision]
 
@@ -196,8 +196,8 @@ Name availability: `server-active-indicator` ✅, `server-status-indicator` ✅,
 
 **Chosen: `server-active-indicator`.**
 
-Positioning: *"A tiny, framework-agnostic client-side status indicator for backends
-that sleep — tells users your app is waking up instead of looking broken."*
+Positioning: _"A tiny, framework-agnostic client-side status indicator for backends
+that sleep — tells users your app is waking up instead of looking broken."_
 
 ## 13. Tooling — [decision]
 

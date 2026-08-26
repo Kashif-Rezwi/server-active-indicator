@@ -23,9 +23,9 @@
 ### Alternatives considered
 
 | Option | Pros | Cons | Verdict |
-|---|---|---|---|
-| A | | | |
-| B | | | |
+| ------ | ---- | ---- | ------- |
+| A      |      |      |         |
+| B      |      |      |         |
 
 ## Design
 

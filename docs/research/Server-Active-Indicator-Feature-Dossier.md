@@ -16,22 +16,22 @@ It is four files, no tests, no dedicated types file, no dedicated styles file, a
 
 ## 2. Complete File Inventory
 
-| File | Purpose | Part of indicator it implements | Connects to |
-|---|---|---|---|
-| `apps/client/lib/use-server-wakeup.ts` | Core hook: pings `/health`, owns the `idle → waking → awake` state machine, timers, elapsed-seconds counter | State/logic, health check, polling, timing | Imports `API_URL` from `lib/api.ts`; consumed by `server-wakeup-context.tsx` |
-| `apps/client/lib/server-wakeup-context.tsx` | React Context provider that wraps `useServerWakeup()`, adds the "auto-dismiss after 2.5s once awake" behavior, exposes `useWakeupContext()` | State distribution, dismiss logic | Calls `use-server-wakeup.ts`; mounted in `app/layout.tsx`; read by `server-wakeup-banner.tsx` |
-| `apps/client/components/ui/server-wakeup-banner.tsx` | The visible UI strip (amber "waking" / green "ready") | UI | Reads `useWakeupContext()`; uses `cn` from `lib/utils.ts`; icons from `lucide-react`; rendered by `app-header.tsx` |
-| `apps/client/components/layout/app-header.tsx` | Shared page header; renders `<ServerWakeupBanner />` as a sibling right after `<header>` | Integration/mount point (UI side) | Imports `server-wakeup-banner.tsx`; itself imported by 5 route files (see §13) |
-| `apps/client/app/layout.tsx` | Root layout; wraps the whole app in `<ServerWakeupProvider>` | Integration/mount point (state side) | Imports `server-wakeup-context.tsx` |
-| `apps/client/lib/api.ts` | Defines `API_URL` from `process.env.NEXT_PUBLIC_API_URL` | Configuration (shared, not feature-specific) | Imported by `use-server-wakeup.ts` for the ping URL |
-| `apps/client/lib/utils.ts` | `cn()` — `clsx` + `tailwind-merge` helper | Styling utility (shared, not feature-specific) | Imported by `server-wakeup-banner.tsx` |
-| `apps/client/.env.example` | Documents `NEXT_PUBLIC_API_URL` default (`http://localhost:4000`) | Environment | Read at build time via `process.env` |
-| `apps/server/src/health.controller.ts` | Implements `GET /health` | Backend health check | Registered in `app.module.ts`; injects `GithubService`, `PrismaService`, `RedisService` |
-| `apps/server/src/app.module.ts` | Registers `HealthController` at the module level | Backend integration point | — |
-| `apps/server/src/main.ts` | Global CORS config (`app.enableCors(...)`) that governs whether the browser is allowed to read the `/health` response at all | Backend/network configuration | Reads `FRONTEND_URL`, `NODE_ENV` |
-| `docs/frontend.md` (lines 196–198) | Pre-existing prose documentation of this feature | Documentation | — (see §19 for a discrepancy between this doc and the actual code) |
+| File                                                 | Purpose                                                                                                                                     | Part of indicator it implements                | Connects to                                                                                                        |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `apps/client/lib/use-server-wakeup.ts`               | Core hook: pings `/health`, owns the `idle → waking → awake` state machine, timers, elapsed-seconds counter                                 | State/logic, health check, polling, timing     | Imports `API_URL` from `lib/api.ts`; consumed by `server-wakeup-context.tsx`                                       |
+| `apps/client/lib/server-wakeup-context.tsx`          | React Context provider that wraps `useServerWakeup()`, adds the "auto-dismiss after 2.5s once awake" behavior, exposes `useWakeupContext()` | State distribution, dismiss logic              | Calls `use-server-wakeup.ts`; mounted in `app/layout.tsx`; read by `server-wakeup-banner.tsx`                      |
+| `apps/client/components/ui/server-wakeup-banner.tsx` | The visible UI strip (amber "waking" / green "ready")                                                                                       | UI                                             | Reads `useWakeupContext()`; uses `cn` from `lib/utils.ts`; icons from `lucide-react`; rendered by `app-header.tsx` |
+| `apps/client/components/layout/app-header.tsx`       | Shared page header; renders `<ServerWakeupBanner />` as a sibling right after `<header>`                                                    | Integration/mount point (UI side)              | Imports `server-wakeup-banner.tsx`; itself imported by 5 route files (see §13)                                     |
+| `apps/client/app/layout.tsx`                         | Root layout; wraps the whole app in `<ServerWakeupProvider>`                                                                                | Integration/mount point (state side)           | Imports `server-wakeup-context.tsx`                                                                                |
+| `apps/client/lib/api.ts`                             | Defines `API_URL` from `process.env.NEXT_PUBLIC_API_URL`                                                                                    | Configuration (shared, not feature-specific)   | Imported by `use-server-wakeup.ts` for the ping URL                                                                |
+| `apps/client/lib/utils.ts`                           | `cn()` — `clsx` + `tailwind-merge` helper                                                                                                   | Styling utility (shared, not feature-specific) | Imported by `server-wakeup-banner.tsx`                                                                             |
+| `apps/client/.env.example`                           | Documents `NEXT_PUBLIC_API_URL` default (`http://localhost:4000`)                                                                           | Environment                                    | Read at build time via `process.env`                                                                               |
+| `apps/server/src/health.controller.ts`               | Implements `GET /health`                                                                                                                    | Backend health check                           | Registered in `app.module.ts`; injects `GithubService`, `PrismaService`, `RedisService`                            |
+| `apps/server/src/app.module.ts`                      | Registers `HealthController` at the module level                                                                                            | Backend integration point                      | —                                                                                                                  |
+| `apps/server/src/main.ts`                            | Global CORS config (`app.enableCors(...)`) that governs whether the browser is allowed to read the `/health` response at all                | Backend/network configuration                  | Reads `FRONTEND_URL`, `NODE_ENV`                                                                                   |
+| `docs/frontend.md` (lines 196–198)                   | Pre-existing prose documentation of this feature                                                                                            | Documentation                                  | — (see §19 for a discrepancy between this doc and the actual code)                                                 |
 
-**Not included**, and why: `apps/server/src/github/github.service.ts`, `apps/server/src/prisma/prisma.service.ts`, and `apps/server/src/queue/redis.service.ts` are referenced *by* `health.controller.ts` for its dependency-health payload (`database`, `redis`, `githubToken`, etc.), but the frontend indicator never reads that payload — it only checks `res.ok`. These are backend-internal collaborators of the `/health` endpoint, not part of the indicator itself. They're covered briefly in §8 for completeness but excluded from the file inventory proper.
+**Not included**, and why: `apps/server/src/github/github.service.ts`, `apps/server/src/prisma/prisma.service.ts`, and `apps/server/src/queue/redis.service.ts` are referenced _by_ `health.controller.ts` for its dependency-health payload (`database`, `redis`, `githubToken`, etc.), but the frontend indicator never reads that payload — it only checks `res.ok`. These are backend-internal collaborators of the `/health` endpoint, not part of the indicator itself. They're covered briefly in §8 for completeness but excluded from the file inventory proper.
 
 There are **no test files** for this feature (`find` for `*wakeup*`/`*health*` under `__tests__`/`.spec.`/`.test.` returned nothing beyond unrelated Prisma/GitHub specs).
 
@@ -168,39 +168,39 @@ How the user sees the result
 ### 6.1 `apps/client/lib/use-server-wakeup.ts` (full file — this is the entire feature's logic core)
 
 ```typescript
-'use client'
+"use client";
 
-import { useState, useEffect } from 'react'
-import { API_URL } from './api'
+import { useState, useEffect } from "react";
+import { API_URL } from "./api";
 
 export type WakeupStatus =
-    | 'idle'    // initial ping in flight — banner not shown yet
-    | 'waking'  // server didn't respond in time — banner visible
-    | 'awake'   // server is up — show brief confirmation then dismiss
+  | "idle" // initial ping in flight — banner not shown yet
+  | "waking" // server didn't respond in time — banner visible
+  | "awake"; // server is up — show brief confirmation then dismiss
 
 /** Per-request timeout for each health ping (initial and polling). */
-const PING_TIMEOUT_MS = 3_000
+const PING_TIMEOUT_MS = 3_000;
 
 /** How often to retry while the server is waking up. */
-const POLL_INTERVAL_MS = 5_000
+const POLL_INTERVAL_MS = 5_000;
 
 /** DEV ONLY — force the waking state to preview the banner → recovery flow without waiting for Render to sleep. Flip back before committing. */
-const DEV_SIMULATE_SLEEP = false
+const DEV_SIMULATE_SLEEP = false;
 
 async function pingHealth(timeoutMs: number): Promise<boolean> {
-    const ac = new AbortController()
-    const timer = setTimeout(() => ac.abort(), timeoutMs)
-    try {
-        const res = await fetch(`${API_URL}/health`, {
-            signal: ac.signal,
-            cache: 'no-store',
-        })
-        return res.ok
-    } catch {
-        return false
-    } finally {
-        clearTimeout(timer)
-    }
+  const ac = new AbortController();
+  const timer = setTimeout(() => ac.abort(), timeoutMs);
+  try {
+    const res = await fetch(`${API_URL}/health`, {
+      signal: ac.signal,
+      cache: "no-store",
+    });
+    return res.ok;
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 /**
@@ -208,63 +208,63 @@ async function pingHealth(timeoutMs: number): Promise<boolean> {
  * 'waking' and poll every POLL_INTERVAL_MS until it's up. Returns the wakeup status + elapsed seconds.
  */
 export function useServerWakeup() {
-    const [status, setStatus] = useState<WakeupStatus>('idle')
-    const [elapsedSec, setElapsedSec] = useState(0)
+  const [status, setStatus] = useState<WakeupStatus>("idle");
+  const [elapsedSec, setElapsedSec] = useState(0);
 
-    useEffect(() => {
-        let cancelled = false
-        let pollTimer: ReturnType<typeof setTimeout> | null = null
-        let elapsedTimer: ReturnType<typeof setInterval> | null = null
+  useEffect(() => {
+    let cancelled = false;
+    let pollTimer: ReturnType<typeof setTimeout> | null = null;
+    let elapsedTimer: ReturnType<typeof setInterval> | null = null;
 
-        const stopTimers = () => {
-            if (pollTimer) clearTimeout(pollTimer)
-            if (elapsedTimer) clearInterval(elapsedTimer)
-        }
+    const stopTimers = () => {
+      if (pollTimer) clearTimeout(pollTimer);
+      if (elapsedTimer) clearInterval(elapsedTimer);
+    };
 
-        const startElapsedCounter = () => {
-            const startTime = Date.now()
-            elapsedTimer = setInterval(() => {
-                if (!cancelled) setElapsedSec(Math.floor((Date.now() - startTime) / 1000))
-            }, 1_000)
-        }
+    const startElapsedCounter = () => {
+      const startTime = Date.now();
+      elapsedTimer = setInterval(() => {
+        if (!cancelled) setElapsedSec(Math.floor((Date.now() - startTime) / 1000));
+      }, 1_000);
+    };
 
-        const poll = async () => {
-            // When simulating, never resolve to awake — keeps the banner visible for inspection.
-            const isUp = DEV_SIMULATE_SLEEP ? false : await pingHealth(PING_TIMEOUT_MS)
-            if (cancelled) return
-            if (isUp) {
-                stopTimers()
-                setStatus('awake')
-            } else {
-                pollTimer = setTimeout(poll, POLL_INTERVAL_MS)
-            }
-        }
+    const poll = async () => {
+      // When simulating, never resolve to awake — keeps the banner visible for inspection.
+      const isUp = DEV_SIMULATE_SLEEP ? false : await pingHealth(PING_TIMEOUT_MS);
+      if (cancelled) return;
+      if (isUp) {
+        stopTimers();
+        setStatus("awake");
+      } else {
+        pollTimer = setTimeout(poll, POLL_INTERVAL_MS);
+      }
+    };
 
-        const run = async () => {
-            const isUp = DEV_SIMULATE_SLEEP ? false : await pingHealth(PING_TIMEOUT_MS)
-            if (cancelled) return
+    const run = async () => {
+      const isUp = DEV_SIMULATE_SLEEP ? false : await pingHealth(PING_TIMEOUT_MS);
+      if (cancelled) return;
 
-            if (isUp) {
-                // Server was already awake — stay 'idle' so the banner never renders; the green
-                // confirmation only shows on recovery from a sleeping state (idle → waking → awake).
-                return
-            }
+      if (isUp) {
+        // Server was already awake — stay 'idle' so the banner never renders; the green
+        // confirmation only shows on recovery from a sleeping state (idle → waking → awake).
+        return;
+      }
 
-            // Server is sleeping — show the banner and start counting
-            setStatus('waking')
-            startElapsedCounter()
-            pollTimer = setTimeout(poll, POLL_INTERVAL_MS)
-        }
+      // Server is sleeping — show the banner and start counting
+      setStatus("waking");
+      startElapsedCounter();
+      pollTimer = setTimeout(poll, POLL_INTERVAL_MS);
+    };
 
-        run()
+    run();
 
-        return () => {
-            cancelled = true
-            stopTimers()
-        }
-    }, [])
+    return () => {
+      cancelled = true;
+      stopTimers();
+    };
+  }, []);
 
-    return { status, elapsedSec }
+  return { status, elapsedSec };
 }
 ```
 
@@ -419,11 +419,13 @@ export default function RootLayout({
 ### 6.5 `apps/client/components/layout/app-header.tsx` (relevant excerpts only — the rest of this 204-line file is unrelated header/nav/session/wallet/menu code)
 
 Import (line 10):
+
 ```typescript
-import { ServerWakeupBanner } from '@/components/ui/server-wakeup-banner'
+import { ServerWakeupBanner } from "@/components/ui/server-wakeup-banner";
 ```
 
 Return statement structure (lines 49–51, showing the fragment wrapping `<header>`):
+
 ```typescript
     return (
         <>
@@ -431,6 +433,7 @@ Return statement structure (lines 49–51, showing the fragment wrapping `<heade
 ```
 
 Mount point (lines 197–201, end of the component — note `ServerWakeupBanner` is a **sibling after `</header>`**, not nested inside it):
+
 ```typescript
                 </div>
             </header>
@@ -439,152 +442,160 @@ Mount point (lines 197–201, end of the component — note `ServerWakeupBanner`
     )
 ```
 
-### 6.6 `apps/client/lib/api.ts` (relevant excerpt — `API_URL` definition only; the rest of the file is the unrelated `apiFetch`/`apiErrorMessage` helpers, which this feature does *not* use)
+### 6.6 `apps/client/lib/api.ts` (relevant excerpt — `API_URL` definition only; the rest of the file is the unrelated `apiFetch`/`apiErrorMessage` helpers, which this feature does _not_ use)
 
 ```typescript
 /** Base URL for all server API calls — set NEXT_PUBLIC_API_URL in your .env */
-export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? ''
+export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
 ```
 
 ### 6.7 `apps/client/lib/utils.ts` (full file — shared styling helper)
 
 ```typescript
-import { clsx, type ClassValue } from "clsx"
-import { twMerge } from "tailwind-merge"
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
 
 export function cn(...inputs: ClassValue[]) {
-    return twMerge(clsx(inputs))
+  return twMerge(clsx(inputs));
 }
 ```
 
 ### 6.8 `apps/server/src/health.controller.ts` (full file — backend endpoint)
 
 ```typescript
-import { Controller, Get } from '@nestjs/common'
-import { Prisma } from '@prisma/client'
+import { Controller, Get } from "@nestjs/common";
+import { Prisma } from "@prisma/client";
 
-import { GithubService } from './github/github.service'
-import { PrismaService } from './prisma/prisma.service'
-import { RedisService } from './queue/redis.service'
+import { GithubService } from "./github/github.service";
+import { PrismaService } from "./prisma/prisma.service";
+import { RedisService } from "./queue/redis.service";
 
-type HealthState = 'valid' | 'invalid' | 'unchecked'
+type HealthState = "valid" | "invalid" | "unchecked";
 type CachedHealth = {
-    expiresAt: number
-    database: HealthState
-    databaseSchema: HealthState
-    redis: HealthState
-    redisStreams: HealthState
-}
+  expiresAt: number;
+  database: HealthState;
+  databaseSchema: HealthState;
+  redis: HealthState;
+  redisStreams: HealthState;
+};
 
-@Controller('health')
+@Controller("health")
 export class HealthController {
-    private cache?: CachedHealth
+  private cache?: CachedHealth;
 
-    constructor(
-        private readonly githubService: GithubService,
-        private readonly prisma: PrismaService,
-        private readonly redisService: RedisService,
-    ) {}
+  constructor(
+    private readonly githubService: GithubService,
+    private readonly prisma: PrismaService,
+    private readonly redisService: RedisService,
+  ) {}
 
-    @Get()
-    async check() {
-        const dependencies = await this.cachedDependencies()
-        const githubToken = this.githubService.getTokenHealth()
-        const degraded = githubToken === 'invalid' ||
-            dependencies.database !== 'valid' ||
-            dependencies.databaseSchema !== 'valid' ||
-            dependencies.redis !== 'valid' ||
-            dependencies.redisStreams !== 'valid'
+  @Get()
+  async check() {
+    const dependencies = await this.cachedDependencies();
+    const githubToken = this.githubService.getTokenHealth();
+    const degraded =
+      githubToken === "invalid" ||
+      dependencies.database !== "valid" ||
+      dependencies.databaseSchema !== "valid" ||
+      dependencies.redis !== "valid" ||
+      dependencies.redisStreams !== "valid";
 
-        return {
-            status: degraded ? 'degraded' : 'ok',
-            ...dependencies,
-            githubToken,
-        }
+    return {
+      status: degraded ? "degraded" : "ok",
+      ...dependencies,
+      githubToken,
+    };
+  }
+
+  private async cachedDependencies(): Promise<Omit<CachedHealth, "expiresAt">> {
+    if (this.cache && this.cache.expiresAt > Date.now()) {
+      return {
+        database: this.cache.database,
+        databaseSchema: this.cache.databaseSchema,
+        redis: this.cache.redis,
+        redisStreams: this.cache.redisStreams,
+      };
     }
 
-    private async cachedDependencies(): Promise<Omit<CachedHealth, 'expiresAt'>> {
-        if (this.cache && this.cache.expiresAt > Date.now()) {
-            return {
-                database: this.cache.database,
-                databaseSchema: this.cache.databaseSchema,
-                redis: this.cache.redis,
-                redisStreams: this.cache.redisStreams,
-            }
-        }
-
-        let database: HealthState = 'invalid'
-        let databaseSchema: HealthState = 'invalid'
-        try {
-            await this.prisma.$queryRaw(Prisma.sql`SELECT 1`)
-            database = 'valid'
-            const rows = await this.prisma.$queryRaw<Array<{ dispatch_table: boolean; coverage_column: boolean }>>(Prisma.sql`
+    let database: HealthState = "invalid";
+    let databaseSchema: HealthState = "invalid";
+    try {
+      await this.prisma.$queryRaw(Prisma.sql`SELECT 1`);
+      database = "valid";
+      const rows = await this.prisma.$queryRaw<
+        Array<{ dispatch_table: boolean; coverage_column: boolean }>
+      >(Prisma.sql`
                 SELECT
                     to_regclass('public."ReviewDispatch"') IS NOT NULL AS dispatch_table,
                     EXISTS (
                         SELECT 1 FROM information_schema.columns
                         WHERE table_schema = 'public' AND table_name = 'Review' AND column_name = 'coverage'
                     ) AS coverage_column
-            `)
-            databaseSchema = rows[0]?.dispatch_table && rows[0]?.coverage_column ? 'valid' : 'invalid'
-        } catch {
-            database = 'invalid'
-            databaseSchema = 'unchecked'
-        }
-
-        const [redisConnected, streamsSupported] = await Promise.all([
-            this.redisService.checkConnection(),
-            this.redisService.checkStreams(),
-        ])
-        this.cache = {
-            expiresAt: Date.now() + 30_000,
-            database,
-            databaseSchema,
-            redis: redisConnected ? 'valid' : 'invalid',
-            redisStreams: streamsSupported ? 'valid' : 'invalid',
-        }
-        return { database, databaseSchema, redis: this.cache.redis, redisStreams: this.cache.redisStreams }
+            `);
+      databaseSchema = rows[0]?.dispatch_table && rows[0]?.coverage_column ? "valid" : "invalid";
+    } catch {
+      database = "invalid";
+      databaseSchema = "unchecked";
     }
+
+    const [redisConnected, streamsSupported] = await Promise.all([
+      this.redisService.checkConnection(),
+      this.redisService.checkStreams(),
+    ]);
+    this.cache = {
+      expiresAt: Date.now() + 30_000,
+      database,
+      databaseSchema,
+      redis: redisConnected ? "valid" : "invalid",
+      redisStreams: streamsSupported ? "valid" : "invalid",
+    };
+    return {
+      database,
+      databaseSchema,
+      redis: this.cache.redis,
+      redisStreams: this.cache.redisStreams,
+    };
+  }
 }
 ```
 
 ### 6.9 `apps/server/src/app.module.ts` (full file — module registration)
 
 ```typescript
-import { Module } from '@nestjs/common'
-import { ConfigModule } from '@nestjs/config'
-import { ThrottlerModule } from '@nestjs/throttler'
-import { PrismaModule } from './prisma/prisma.module'
-import { RagModule } from './rag/rag.module'
-import { ReviewModule } from './review/review.module'
-import { HistoryModule } from './history/history.module'
-import { AuthModule } from './auth/auth.module'
-import { HealthController } from './health.controller'
-import { QueueModule } from './queue/queue.module'
-import { AiModule } from './ai/ai.module'
-import { GithubModule } from './github/github.module'
-import { PaymentsModule } from './payments/payments.module'
+import { Module } from "@nestjs/common";
+import { ConfigModule } from "@nestjs/config";
+import { ThrottlerModule } from "@nestjs/throttler";
+import { PrismaModule } from "./prisma/prisma.module";
+import { RagModule } from "./rag/rag.module";
+import { ReviewModule } from "./review/review.module";
+import { HistoryModule } from "./history/history.module";
+import { AuthModule } from "./auth/auth.module";
+import { HealthController } from "./health.controller";
+import { QueueModule } from "./queue/queue.module";
+import { AiModule } from "./ai/ai.module";
+import { GithubModule } from "./github/github.module";
+import { PaymentsModule } from "./payments/payments.module";
 
 @Module({
-    imports: [
-        ConfigModule.forRoot({ isGlobal: true }),
-        // Cost guardrail for paid AI endpoints. Limits apply only where
-        // UserThrottlerGuard is used; keyed by authenticated userId.
-        ThrottlerModule.forRoot({
-            errorMessage: 'Rate limit exceeded — too many requests. Please wait before trying again.',
-            throttlers: [{ name: 'default', ttl: 3_600_000, limit: 60 }],
-        }),
-        PrismaModule,
-        AiModule,
-        GithubModule,
-        AuthModule,
-        RagModule,
-        ReviewModule,
-        HistoryModule,
-        QueueModule,
-        PaymentsModule,
-    ],
-    controllers: [HealthController],
+  imports: [
+    ConfigModule.forRoot({ isGlobal: true }),
+    // Cost guardrail for paid AI endpoints. Limits apply only where
+    // UserThrottlerGuard is used; keyed by authenticated userId.
+    ThrottlerModule.forRoot({
+      errorMessage: "Rate limit exceeded — too many requests. Please wait before trying again.",
+      throttlers: [{ name: "default", ttl: 3_600_000, limit: 60 }],
+    }),
+    PrismaModule,
+    AiModule,
+    GithubModule,
+    AuthModule,
+    RagModule,
+    ReviewModule,
+    HistoryModule,
+    QueueModule,
+    PaymentsModule,
+  ],
+  controllers: [HealthController],
 })
 export class AppModule {}
 ```
@@ -592,55 +603,55 @@ export class AppModule {}
 ### 6.10 `apps/server/src/main.ts` (full file — bootstrap, CORS is what matters for this feature)
 
 ```typescript
-import { NestFactory } from '@nestjs/core'
-import { ValidationPipe } from '@nestjs/common'
-import type { IncomingMessage } from 'http'
-import { json, urlencoded } from 'express'
-import type { NestExpressApplication } from '@nestjs/platform-express'
-import { AppModule } from './app.module'
+import { NestFactory } from "@nestjs/core";
+import { ValidationPipe } from "@nestjs/common";
+import type { IncomingMessage } from "http";
+import { json, urlencoded } from "express";
+import type { NestExpressApplication } from "@nestjs/platform-express";
+import { AppModule } from "./app.module";
 
 async function bootstrap() {
-  const app = await NestFactory.create<NestExpressApplication>(AppModule, { rawBody: true, bodyParser: false })
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    rawBody: true,
+    bodyParser: false,
+  });
 
   app.use(
     json({
-      limit: '1mb',
+      limit: "1mb",
       verify: (req: IncomingMessage & { rawBody?: Buffer }, _res, buf) => {
-        req.rawBody = buf
+        req.rawBody = buf;
       },
     }),
-  )
-  app.use(urlencoded({ extended: true, limit: '1mb' }))
+  );
+  app.use(urlencoded({ extended: true, limit: "1mb" }));
 
   // RZC-008: Trust upstream reverse proxy (Cloudflare/Vercel/Render) for accurate req.ip in Throttler
-  app.set('trust proxy', 1)
+  app.set("trust proxy", 1);
 
-  app.useGlobalPipes(new ValidationPipe({ whitelist: true }))
+  app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
 
-
-  const frontendUrl = process.env.FRONTEND_URL?.replace(/\/$/, '') || 'http://localhost:3000'
+  const frontendUrl = process.env.FRONTEND_URL?.replace(/\/$/, "") || "http://localhost:3000";
 
   // localhost is a dev convenience — never trust it in production
   const allowedOrigins =
-    process.env.NODE_ENV === 'production'
-      ? [frontendUrl]
-      : [frontendUrl, 'http://localhost:3000']
+    process.env.NODE_ENV === "production" ? [frontendUrl] : [frontendUrl, "http://localhost:3000"];
 
   app.enableCors({
     origin: allowedOrigins,
     credentials: true,
     // x-dev-pack: operator-only header that unlocks the hidden ₹1 dev pack per-request.
-    allowedHeaders: ['Content-Type', 'Authorization', 'x-dev-pack'],
-  })
+    allowedHeaders: ["Content-Type", "Authorization", "x-dev-pack"],
+  });
 
   // Drain Prisma/Redis/BullMQ cleanly on SIGTERM (every Render deploy sends one)
-  app.enableShutdownHooks()
+  app.enableShutdownHooks();
 
-  const port = process.env.PORT ?? 4000
-  await app.listen(port)
-  console.log(`Server running on port ${port}`)
+  const port = process.env.PORT ?? 4000;
+  await app.listen(port);
+  console.log(`Server running on port ${port}`);
 }
-void bootstrap()
+void bootstrap();
 ```
 
 ### 6.11 `apps/client/.env.example` (relevant line)
@@ -656,23 +667,23 @@ NEXT_PUBLIC_API_URL=http://localhost:4000
 
 **Direct dependencies (truly required for the indicator itself):**
 
-| Dependency | Used for | Required? |
-|---|---|---|
-| React `useState`/`useEffect`/`createContext`/`useContext` | State machine, context distribution | Yes — core to the logic |
-| Browser `fetch` API | Making the health-check request | Yes |
-| Browser `AbortController` | Per-request timeout | Yes |
-| Browser `setTimeout`/`setInterval` | Polling cadence, elapsed-seconds counter | Yes |
-| `lucide-react` (`CloudOff`, `CheckCircle`, `Loader2`) | Banner icons | Cosmetic — swappable for any icon set |
+| Dependency                                                | Used for                                 | Required?                             |
+| --------------------------------------------------------- | ---------------------------------------- | ------------------------------------- |
+| React `useState`/`useEffect`/`createContext`/`useContext` | State machine, context distribution      | Yes — core to the logic               |
+| Browser `fetch` API                                       | Making the health-check request          | Yes                                   |
+| Browser `AbortController`                                 | Per-request timeout                      | Yes                                   |
+| Browser `setTimeout`/`setInterval`                        | Polling cadence, elapsed-seconds counter | Yes                                   |
+| `lucide-react` (`CloudOff`, `CheckCircle`, `Loader2`)     | Banner icons                             | Cosmetic — swappable for any icon set |
 
 **Application dependencies (incidental — present only because of how this app is built):**
 
-| Dependency | Why it's here | Truly needed for a reusable version? |
-|---|---|---|
-| Next.js (`'use client'` directive) | This app is a Next.js App Router project | No — the hook/context logic is plain React; only the directive is Next-specific |
-| `clsx` + `tailwind-merge` (via `lib/utils.ts::cn`) | This app's className-merging convention | No — any className approach (or CSS Modules/styled-components) would work |
-| Tailwind CSS utility classes | This app's styling system | No — purely presentational, tightly coupled to this app's design tokens (`amber-950/60`, `green-950/60`, `app-bg`, etc.) |
-| NestJS (`@Controller`, `@Get`) | This backend is NestJS | No — the reusable *contract* is just "a GET endpoint that returns 2xx when healthy"; any backend framework satisfies it |
-| Prisma / ioredis / GitHub token check inside `/health` | This app's specific dependency graph | No — and notably the frontend indicator doesn't even care about this detail, since it only checks `res.ok`, not the JSON body |
+| Dependency                                             | Why it's here                            | Truly needed for a reusable version?                                                                                          |
+| ------------------------------------------------------ | ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Next.js (`'use client'` directive)                     | This app is a Next.js App Router project | No — the hook/context logic is plain React; only the directive is Next-specific                                               |
+| `clsx` + `tailwind-merge` (via `lib/utils.ts::cn`)     | This app's className-merging convention  | No — any className approach (or CSS Modules/styled-components) would work                                                     |
+| Tailwind CSS utility classes                           | This app's styling system                | No — purely presentational, tightly coupled to this app's design tokens (`amber-950/60`, `green-950/60`, `app-bg`, etc.)      |
+| NestJS (`@Controller`, `@Get`)                         | This backend is NestJS                   | No — the reusable _contract_ is just "a GET endpoint that returns 2xx when healthy"; any backend framework satisfies it       |
+| Prisma / ioredis / GitHub token check inside `/health` | This app's specific dependency graph     | No — and notably the frontend indicator doesn't even care about this detail, since it only checks `res.ok`, not the JSON body |
 
 **Notably not used by this feature**, despite being available in the app: the shared `apiFetch()` wrapper in `lib/api.ts` (which adds Bearer-token auth and JSON parsing). The wakeup hook only imports the `API_URL` string constant from that file and does its own raw `fetch` — an architectural choice that keeps the health ping decoupled from auth state.
 
@@ -680,16 +691,16 @@ NEXT_PUBLIC_API_URL=http://localhost:4000
 
 ## 8. Configuration and Environment
 
-| Value | Where defined | How it's used | Configurable? |
-|---|---|---|---|
-| `NEXT_PUBLIC_API_URL` | `.env` (client), documented in `apps/client/.env.example` and `docs/deployment.md` (Vercel dashboard var) | Read via `process.env.NEXT_PUBLIC_API_URL` in `lib/api.ts` → exported as `API_URL` → interpolated into `${API_URL}/health` | Yes — the only externally configurable value this feature uses |
-| `PING_TIMEOUT_MS = 3_000` | Hardcoded module-level constant in `use-server-wakeup.ts` | Passed to `pingHealth()` as the `AbortController` timeout, for both the initial ping and every poll | No — not env-driven, would require a code change |
-| `POLL_INTERVAL_MS = 5_000` | Hardcoded module-level constant in `use-server-wakeup.ts` | Delay before each retry while status is `'waking'` | No |
-| `DEV_SIMULATE_SLEEP = false` | Hardcoded module-level constant in `use-server-wakeup.ts` | When flipped to `true`, forces every ping to be treated as failed, so the banner stays visible for manual testing. Comment explicitly says "Flip back before committing." | No — manual code edit, not a build-time env flag |
-| Dismiss delay `2_500` ms | Inlined literal inside `server-wakeup-context.tsx`'s `useEffect` | How long the green "Server is ready" banner stays up before `dismissed` is set | No — not a named constant, not configurable |
-| Backend dependency-cache TTL `30_000` ms | Inlined literal inside `health.controller.ts` | Caches the DB/Redis/GitHub-token sub-checks for 30s so `/health` doesn't hit Postgres/Redis on every single call | No — and irrelevant to the frontend, which never reads this |
-| `FRONTEND_URL`, `NODE_ENV` | Server env vars, read in `main.ts` | Determine CORS `allowedOrigins` for **all** routes including `/health` — if misconfigured, the browser's health ping would be blocked by CORS and `pingHealth()` would report "down" even if the server is up | Yes, but it's an app-wide setting, not indicator-specific |
-| `PORT` | Server env var, read in `main.ts` | Which port `/health` (and everything else) listens on | Yes, app-wide |
+| Value                                    | Where defined                                                                                             | How it's used                                                                                                                                                                                                 | Configurable?                                                  |
+| ---------------------------------------- | --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| `NEXT_PUBLIC_API_URL`                    | `.env` (client), documented in `apps/client/.env.example` and `docs/deployment.md` (Vercel dashboard var) | Read via `process.env.NEXT_PUBLIC_API_URL` in `lib/api.ts` → exported as `API_URL` → interpolated into `${API_URL}/health`                                                                                    | Yes — the only externally configurable value this feature uses |
+| `PING_TIMEOUT_MS = 3_000`                | Hardcoded module-level constant in `use-server-wakeup.ts`                                                 | Passed to `pingHealth()` as the `AbortController` timeout, for both the initial ping and every poll                                                                                                           | No — not env-driven, would require a code change               |
+| `POLL_INTERVAL_MS = 5_000`               | Hardcoded module-level constant in `use-server-wakeup.ts`                                                 | Delay before each retry while status is `'waking'`                                                                                                                                                            | No                                                             |
+| `DEV_SIMULATE_SLEEP = false`             | Hardcoded module-level constant in `use-server-wakeup.ts`                                                 | When flipped to `true`, forces every ping to be treated as failed, so the banner stays visible for manual testing. Comment explicitly says "Flip back before committing."                                     | No — manual code edit, not a build-time env flag               |
+| Dismiss delay `2_500` ms                 | Inlined literal inside `server-wakeup-context.tsx`'s `useEffect`                                          | How long the green "Server is ready" banner stays up before `dismissed` is set                                                                                                                                | No — not a named constant, not configurable                    |
+| Backend dependency-cache TTL `30_000` ms | Inlined literal inside `health.controller.ts`                                                             | Caches the DB/Redis/GitHub-token sub-checks for 30s so `/health` doesn't hit Postgres/Redis on every single call                                                                                              | No — and irrelevant to the frontend, which never reads this    |
+| `FRONTEND_URL`, `NODE_ENV`               | Server env vars, read in `main.ts`                                                                        | Determine CORS `allowedOrigins` for **all** routes including `/health` — if misconfigured, the browser's health ping would be blocked by CORS and `pingHealth()` would report "down" even if the server is up | Yes, but it's an app-wide setting, not indicator-specific      |
+| `PORT`                                   | Server env var, read in `main.ts`                                                                         | Which port `/health` (and everything else) listens on                                                                                                                                                         | Yes, app-wide                                                  |
 
 No feature flags gate this feature on or off — it always runs once `ServerWakeupProvider` is mounted.
 
@@ -717,7 +728,7 @@ No feature flags gate this feature on or off — it always runs once `ServerWake
 - **Timeout behavior (client-side):** 3 seconds per attempt, enforced entirely on the frontend via `AbortController`; the backend itself has no request-level timeout logic for this route.
 - **CORS requirements:** Governed by the app-wide `app.enableCors({ origin: allowedOrigins, credentials: true, allowedHeaders: [...] })` in `main.ts`. `allowedOrigins` is `[FRONTEND_URL]` in production or `[FRONTEND_URL, 'http://localhost:3000']` otherwise. There's no route-level override for `/health` — it inherits the global policy.
 - **Authentication requirements:** None. `HealthController` has no guards applied, so `/health` is publicly reachable without a session or token.
-- **Backend implementation:** Shown in full in §6.8. Internally it composes three sub-checks (Postgres via Prisma, Redis via `ioredis` ping + stream-command probe, and a cached GitHub-token validity flag from `GithubService`), cached for 30 seconds, and folds them into a single `degraded`/`ok` status — but again, this richer signal is invisible to the Server Wakeup feature, which only needs *any* 2xx response.
+- **Backend implementation:** Shown in full in §6.8. Internally it composes three sub-checks (Postgres via Prisma, Redis via `ioredis` ping + stream-command probe, and a cached GitHub-token validity flag from `GithubService`), cached for 30 seconds, and folds them into a single `degraded`/`ok` status — but again, this richer signal is invisible to the Server Wakeup feature, which only needs _any_ 2xx response.
 
 ---
 
@@ -725,12 +736,12 @@ No feature flags gate this feature on or off — it always runs once `ServerWake
 
 The only state type is `WakeupStatus = 'idle' | 'waking' | 'awake'`, defined in `use-server-wakeup.ts`. A fourth boolean, `dismissed`, lives alongside it in the context (not part of `WakeupStatus` itself, but functionally a fourth UI state).
 
-| State | How entered | What it means | What the UI displays | What happens while in it |
-|---|---|---|---|---|
-| `idle` | Default initial value; also the **permanent** state if the very first ping succeeds within 3s | Either "haven't checked yet" or "server was already awake" — the code deliberately does not distinguish these for UI purposes | Nothing (`ServerWakeupBanner` returns `null`) | One ping in flight (initial mount only); no polling scheduled |
-| `waking` | The initial ping fails or times out (>3s / network error / non-2xx) | Server is presumed asleep (Render cold start) | Amber strip: "Server is waking up" + spinning loader + live elapsed-time counter (`Ns` or `Mm Ss`) | Polls `/health` every 5s; `elapsedSec` ticks up every 1s via `setInterval` |
-| `awake` | A poll issued while in `waking` succeeds | Server has come back up after being asleep | Green strip: "Server is ready" (no counter) | Polling stops permanently (`stopTimers()`); after 2.5s, `dismissed` flips to `true` (handled in the context provider, not the hook) |
-| `dismissed = true` (context-level, not a `WakeupStatus` value) | 2.5s after entering `awake` | Confirmation has been shown long enough | Nothing (banner returns `null`) | No further pings of any kind — this is terminal for the mount's lifetime |
+| State                                                          | How entered                                                                                   | What it means                                                                                                                 | What the UI displays                                                                               | What happens while in it                                                                                                            |
+| -------------------------------------------------------------- | --------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `idle`                                                         | Default initial value; also the **permanent** state if the very first ping succeeds within 3s | Either "haven't checked yet" or "server was already awake" — the code deliberately does not distinguish these for UI purposes | Nothing (`ServerWakeupBanner` returns `null`)                                                      | One ping in flight (initial mount only); no polling scheduled                                                                       |
+| `waking`                                                       | The initial ping fails or times out (>3s / network error / non-2xx)                           | Server is presumed asleep (Render cold start)                                                                                 | Amber strip: "Server is waking up" + spinning loader + live elapsed-time counter (`Ns` or `Mm Ss`) | Polls `/health` every 5s; `elapsedSec` ticks up every 1s via `setInterval`                                                          |
+| `awake`                                                        | A poll issued while in `waking` succeeds                                                      | Server has come back up after being asleep                                                                                    | Green strip: "Server is ready" (no counter)                                                        | Polling stops permanently (`stopTimers()`); after 2.5s, `dismissed` flips to `true` (handled in the context provider, not the hook) |
+| `dismissed = true` (context-level, not a `WakeupStatus` value) | 2.5s after entering `awake`                                                                   | Confirmation has been shown long enough                                                                                       | Nothing (banner returns `null`)                                                                    | No further pings of any kind — this is terminal for the mount's lifetime                                                            |
 
 **Transition flow:**
 
@@ -750,7 +761,7 @@ The only state type is `WakeupStatus = 'idle' | 'waking' | 'awake'`, defined in 
                                             [awake] ── 2.5s later ──► dismissed=true ──► (banner hidden, terminal)
 ```
 
-Important nuance preserved from the code: `idle → awake` is **not** a reachable transition. The green confirmation is only ever shown on *recovery* from `waking`, never on a same-session server that was healthy from the start — this is explicit in the source comment (`use-server-wakeup.ts`, inside `run()`).
+Important nuance preserved from the code: `idle → awake` is **not** a reachable transition. The green confirmation is only ever shown on _recovery_ from `waking`, never on a same-session server that was healthy from the start — this is explicit in the source comment (`use-server-wakeup.ts`, inside `run()`).
 
 ---
 
@@ -760,31 +771,31 @@ Important nuance preserved from the code: `idle → awake` is **not** a reachabl
 - **Text/messages:** Exactly two literal strings in the code: `"Server is waking up"` and `"Server is ready"`. No dynamic error messages are ever shown.
 - **Status colors:** Amber (`bg-amber-950/60 border-amber-500/20 text-amber-300`, icon `text-amber-400`) while `waking`; green (`bg-green-950/60 border-green-500/20 text-green-300`, icon `text-green-400`) while `awake`.
 - **Animations:** `Loader2` icon spins (`animate-spin`) only in the `waking` state; the color transition between states is a CSS transition, not a JS animation.
-- **Loading states:** The `waking` amber strip *is* the loading state — accompanied by a monospaced (`tabular-nums`), live-updating elapsed-time readout (`formatElapsed`: `"Ns"` under 60s, `"Mm Ss"` at/above 60s).
+- **Loading states:** The `waking` amber strip _is_ the loading state — accompanied by a monospaced (`tabular-nums`), live-updating elapsed-time readout (`formatElapsed`: `"Ns"` under 60s, `"Mm Ss"` at/above 60s).
 - **Error states:** There is no distinct visual error state. A hard failure (e.g., server permanently down, CORS misconfigured, offline) looks identical to "still waking up" — the banner just stays amber and keeps counting up indefinitely, since there's no retry cap.
 - **Visibility rules:** Hidden (`null`) when `dismissed` is `true` or `status === 'idle'`. Only visible during `waking` and for 2.5s during `awake`. Additionally, since the component is only rendered inside `AppHeader`, it never appears on pages that don't render `AppHeader` — that's the home page (`app/page.tsx`) and the login page (`app/login/page.tsx`); it does appear on `/review*`, `/history`, `/history/[reviewType]/[reviewId]`, `/account`, and `/standards`.
-- **Placement:** Structurally a sibling immediately *after* the closing `</header>` tag (both inside the same `<>...</>` fragment returned by `AppHeader`), not nested inside the `<header>` element itself, despite the code comment describing it as "inside AppHeader."
+- **Placement:** Structurally a sibling immediately _after_ the closing `</header>` tag (both inside the same `<>...</>` fragment returned by `AppHeader`), not nested inside the `<header>` element itself, despite the code comment describing it as "inside AppHeader."
 - **Responsive behavior:** No responsive/breakpoint-specific classes at all — the same layout at every viewport width (it's a simple centered flex row that wraps naturally).
 - **Interaction behavior:** None — no buttons, no manual dismiss/close control, no click handlers. Dismissal is purely time-based.
 - **Accessibility behavior:** `role="status"` and `aria-live="polite"` on the outer `div`, so screen readers announce banner text changes without interrupting the user.
 
-**Coupling assessment:** The color values, spacing scale, border/backdrop styling, and font sizing are all raw Tailwind utility classes tied to this app's design tokens (e.g., `app-bg` is a custom color name used elsewhere in the app). The *structure* (a live-region strip with an icon + message + optional counter, two named states, timed auto-dismiss) is conceptually reusable; the *exact visual styling* is not, without either keeping Tailwind + this token set or re-implementing the classNames in another styling system.
+**Coupling assessment:** The color values, spacing scale, border/backdrop styling, and font sizing are all raw Tailwind utility classes tied to this app's design tokens (e.g., `app-bg` is a custom color name used elsewhere in the app). The _structure_ (a live-region strip with an icon + message + optional counter, two named states, timed auto-dismiss) is conceptually reusable; the _exact visual styling_ is not, without either keeping Tailwind + this token set or re-implementing the classNames in another styling system.
 
 ---
 
 ## 12. Timing and Request Behavior
 
-| Behavior | Value | Source |
-|---|---|---|
-| Initial check | Fires immediately on `ServerWakeupProvider` mount (no delay) | `run()` called synchronously inside the `useEffect` body |
-| Request timeout (per attempt) | 3,000 ms | `PING_TIMEOUT_MS`, applied to both the first ping and every subsequent poll |
-| Retry delay / polling interval | 5,000 ms flat | `POLL_INTERVAL_MS` — no exponential backoff, no jitter |
-| Backoff | None | Every `setTimeout(poll, POLL_INTERVAL_MS)` call uses the same fixed constant |
-| Maximum retries | None — polls indefinitely until success or component unmount | No retry counter exists anywhere in the hook |
-| Delay before showing the "waking" message | Equal to however long the *first* ping takes to fail/time out (up to 3s) — there's no separate reveal delay beyond that | Message shows the instant `status` becomes `'waking'`, which happens right after the first failed `pingHealth()` call resolves |
-| Delay before hiding the indicator | 2,500 ms after entering `awake` | Hardcoded in `server-wakeup-context.tsx`'s `useEffect` |
-| Elapsed-counter tick rate | 1,000 ms | `setInterval(..., 1_000)` inside `startElapsedCounter()` |
-| Backend dependency-check cache | 30,000 ms | `health.controller.ts` — irrelevant to the frontend's own timing, since the frontend doesn't inspect the payload that this caches |
+| Behavior                                  | Value                                                                                                                   | Source                                                                                                                            |
+| ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| Initial check                             | Fires immediately on `ServerWakeupProvider` mount (no delay)                                                            | `run()` called synchronously inside the `useEffect` body                                                                          |
+| Request timeout (per attempt)             | 3,000 ms                                                                                                                | `PING_TIMEOUT_MS`, applied to both the first ping and every subsequent poll                                                       |
+| Retry delay / polling interval            | 5,000 ms flat                                                                                                           | `POLL_INTERVAL_MS` — no exponential backoff, no jitter                                                                            |
+| Backoff                                   | None                                                                                                                    | Every `setTimeout(poll, POLL_INTERVAL_MS)` call uses the same fixed constant                                                      |
+| Maximum retries                           | None — polls indefinitely until success or component unmount                                                            | No retry counter exists anywhere in the hook                                                                                      |
+| Delay before showing the "waking" message | Equal to however long the _first_ ping takes to fail/time out (up to 3s) — there's no separate reveal delay beyond that | Message shows the instant `status` becomes `'waking'`, which happens right after the first failed `pingHealth()` call resolves    |
+| Delay before hiding the indicator         | 2,500 ms after entering `awake`                                                                                         | Hardcoded in `server-wakeup-context.tsx`'s `useEffect`                                                                            |
+| Elapsed-counter tick rate                 | 1,000 ms                                                                                                                | `setInterval(..., 1_000)` inside `startElapsedCounter()`                                                                          |
+| Backend dependency-check cache            | 30,000 ms                                                                                                               | `health.controller.ts` — irrelevant to the frontend's own timing, since the frontend doesn't inspect the payload that this caches |
 
 All of these are drawn directly from the source; none are assumed or inferred beyond what the constants and literals state.
 
@@ -794,14 +805,14 @@ All of these are drawn directly from the source; none are assumed or inferred be
 
 Traced directly from `pingHealth()` and its callers — there is a single unified failure path; the following scenarios all converge on the same code behavior (`pingHealth()` resolving to `false`):
 
-| Scenario | Actual behavior |
-|---|---|
-| Server unavailable (connection refused, DNS failure) | `fetch` rejects → caught by `catch { return false }` → treated as "not up" |
-| Server takes too long (Render cold start, slow response) | `AbortController.abort()` fires after 3s → `fetch` rejects with an abort error → same `catch` → `false` |
-| Request fails outright (network error mid-flight) | Same `catch` → `false` |
-| Request returns a non-2xx status (e.g. 500, 503) | No exception — `res.ok` is `false` → `pingHealth` returns `false` directly (this is the one branch that doesn't go through `catch`) |
-| Browser is offline | No explicit `navigator.onLine` check exists; an offline `fetch` simply rejects like any other network error → same `catch` → `false` |
-| Backend returns an unexpected response shape | Irrelevant — the body is never parsed, so shape doesn't matter; only `res.ok` is read |
+| Scenario                                                       | Actual behavior                                                                                                                                                                      |
+| -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Server unavailable (connection refused, DNS failure)           | `fetch` rejects → caught by `catch { return false }` → treated as "not up"                                                                                                           |
+| Server takes too long (Render cold start, slow response)       | `AbortController.abort()` fires after 3s → `fetch` rejects with an abort error → same `catch` → `false`                                                                              |
+| Request fails outright (network error mid-flight)              | Same `catch` → `false`                                                                                                                                                               |
+| Request returns a non-2xx status (e.g. 500, 503)               | No exception — `res.ok` is `false` → `pingHealth` returns `false` directly (this is the one branch that doesn't go through `catch`)                                                  |
+| Browser is offline                                             | No explicit `navigator.onLine` check exists; an offline `fetch` simply rejects like any other network error → same `catch` → `false`                                                 |
+| Backend returns an unexpected response shape                   | Irrelevant — the body is never parsed, so shape doesn't matter; only `res.ok` is read                                                                                                |
 | Health endpoint cannot be reached due to CORS misconfiguration | The browser blocks the response from being read; `fetch` rejects → same `catch` → `false`. From the user's perspective this is indistinguishable from the server actually being down |
 
 Because every failure mode collapses to the same boolean `false`, the only two visible outcomes to the user are "still waking up" (amber, indefinitely) or "ready" (green, briefly). There is no way, from the UI alone, to tell a genuinely dead backend apart from a slow-to-wake one, and no error message ever surfaces beyond the generic "waking up" text.
@@ -826,6 +837,7 @@ components/layout/app-header.tsx  (AppHeader — rendered on 5 of the app's rout
 ```
 
 `AppHeader` (and therefore the visible banner) is imported and rendered by:
+
 - `components/review/review-page-client.tsx` (used by `/review`, `/review/[reviewType]`, `/review/[reviewType]/[reviewId]`)
 - `app/history/page.tsx`
 - `app/history/[reviewType]/[reviewId]/page.tsx`
@@ -835,6 +847,7 @@ components/layout/app-header.tsx  (AppHeader — rendered on 5 of the app's rout
 Not rendered on `app/page.tsx` (home) or `app/login/page.tsx` — the state (`ServerWakeupProvider`) is still running there (it's global via the root layout), but there is nowhere for it to render, so the ping still happens silently on those pages with no visible effect.
 
 **What would need to be removed from the host app to extract this feature:**
+
 1. The `<ServerWakeupProvider>` wrapper in `app/layout.tsx` (2 lines: the opening/closing tags, plus its import).
 2. The `<ServerWakeupBanner />` line and its import in `app-header.tsx` (2 lines).
 3. The three feature files themselves (`use-server-wakeup.ts`, `server-wakeup-context.tsx`, `server-wakeup-banner.tsx`).
@@ -875,28 +888,28 @@ Network target (external to the frontend dependency tree):
 
 ## 16. Feature Boundary
 
-| Current code | Feature | Application-specific | Reason |
-|---|---|---|---|
-| `useServerWakeup` state machine (`use-server-wakeup.ts`) | ✓ | | Pure logic, no app-specific imports besides the `API_URL` string |
-| `ServerWakeupProvider` / `useWakeupContext` (`server-wakeup-context.tsx`) | ✓ | | Generic React Context wiring + a timed dismiss; nothing app-specific |
-| `ServerWakeupBanner` component structure (JSX shape, conditional rendering, `role`/`aria-live`) | ✓ | | The *behavior* (what renders when) is feature logic |
-| `WakeupStatus` type | ✓ | | Small, self-contained, feature-owned |
-| Banner's Tailwind classNames / color values | | ✓ | Tied to this app's Tailwind config and design tokens (`app-bg`, the specific amber/green shades) |
-| `cn()` utility | ? | ? | Reusable in spirit (any `clsx`-style merge works), but as imported it's this app's shared helper, not feature-owned |
-| `lucide-react` icon choice | ? | ? | The *concept* of an icon per state is feature-relevant; the specific icon library is an app-wide dependency choice |
-| `API_URL` constant / `NEXT_PUBLIC_API_URL` env var | ✓ (the pattern) | ✓ (the specific var name/mechanism) | A reusable version needs *some* configurable base URL; this exact env-var name and Next.js `process.env` convention is app-specific |
-| `AppHeader` component (everything besides the one `<ServerWakeupBanner />` line) | | ✓ | Nav links, session/wallet UI, mobile menu — unrelated to the indicator |
-| `app/layout.tsx` (everything besides the `<ServerWakeupProvider>` wrapper) | | ✓ | Fonts, `SessionProvider`, `WalletProvider`, global CSS |
-| `health.controller.ts`'s `/health` route existing at all, returning 2xx when reachable | ✓ (the contract) | | A reusable indicator needs *a* health endpoint; this exact one satisfies the contract |
-| `health.controller.ts`'s internal dependency checks (DB/Redis/GitHub-token, `degraded` payload) | | ✓ | Entirely this app's infrastructure; the frontend indicator ignores it |
-| NestJS `@Controller`/`@Get` decorators, module registration | | ✓ | Framework-specific; only the "GET endpoint returns 2xx" contract matters to the indicator |
-| CORS configuration in `main.ts` | | ✓ | App-wide policy that happens to also gate `/health`; not feature-owned, but a real-world prerequisite for the ping to succeed cross-origin |
+| Current code                                                                                    | Feature          | Application-specific                | Reason                                                                                                                                     |
+| ----------------------------------------------------------------------------------------------- | ---------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `useServerWakeup` state machine (`use-server-wakeup.ts`)                                        | ✓                |                                     | Pure logic, no app-specific imports besides the `API_URL` string                                                                           |
+| `ServerWakeupProvider` / `useWakeupContext` (`server-wakeup-context.tsx`)                       | ✓                |                                     | Generic React Context wiring + a timed dismiss; nothing app-specific                                                                       |
+| `ServerWakeupBanner` component structure (JSX shape, conditional rendering, `role`/`aria-live`) | ✓                |                                     | The _behavior_ (what renders when) is feature logic                                                                                        |
+| `WakeupStatus` type                                                                             | ✓                |                                     | Small, self-contained, feature-owned                                                                                                       |
+| Banner's Tailwind classNames / color values                                                     |                  | ✓                                   | Tied to this app's Tailwind config and design tokens (`app-bg`, the specific amber/green shades)                                           |
+| `cn()` utility                                                                                  | ?                | ?                                   | Reusable in spirit (any `clsx`-style merge works), but as imported it's this app's shared helper, not feature-owned                        |
+| `lucide-react` icon choice                                                                      | ?                | ?                                   | The _concept_ of an icon per state is feature-relevant; the specific icon library is an app-wide dependency choice                         |
+| `API_URL` constant / `NEXT_PUBLIC_API_URL` env var                                              | ✓ (the pattern)  | ✓ (the specific var name/mechanism) | A reusable version needs _some_ configurable base URL; this exact env-var name and Next.js `process.env` convention is app-specific        |
+| `AppHeader` component (everything besides the one `<ServerWakeupBanner />` line)                |                  | ✓                                   | Nav links, session/wallet UI, mobile menu — unrelated to the indicator                                                                     |
+| `app/layout.tsx` (everything besides the `<ServerWakeupProvider>` wrapper)                      |                  | ✓                                   | Fonts, `SessionProvider`, `WalletProvider`, global CSS                                                                                     |
+| `health.controller.ts`'s `/health` route existing at all, returning 2xx when reachable          | ✓ (the contract) |                                     | A reusable indicator needs _a_ health endpoint; this exact one satisfies the contract                                                      |
+| `health.controller.ts`'s internal dependency checks (DB/Redis/GitHub-token, `degraded` payload) |                  | ✓                                   | Entirely this app's infrastructure; the frontend indicator ignores it                                                                      |
+| NestJS `@Controller`/`@Get` decorators, module registration                                     |                  | ✓                                   | Framework-specific; only the "GET endpoint returns 2xx" contract matters to the indicator                                                  |
+| CORS configuration in `main.ts`                                                                 |                  | ✓                                   | App-wide policy that happens to also gate `/health`; not feature-owned, but a real-world prerequisite for the ping to succeed cross-origin |
 
 ---
 
 ## 17. Extraction Map
 
-*(Extraction map only, as requested — no implementation performed.)*
+_(Extraction map only, as requested — no implementation performed.)_
 
 ```text
 Current App (code-review-agent)
@@ -924,10 +937,11 @@ Application adapter  [what a host app must supply]
 ```
 
 **Marked by category:**
+
 - **Reusable as-is:** `WakeupStatus` type; the `pingHealth()` timeout/abort pattern; the idle→waking→awake transition logic; the flat 5s poll / 3s timeout / 2.5s dismiss timing constants (as defaults).
 - **Reusable with small adaptation:** the Context+Provider wiring (would need to accept a `healthUrl` prop instead of importing `API_URL` directly); the banner's structural JSX (would need theming or class-prop injection instead of hardcoded Tailwind classes).
 - **Tightly coupled:** the exact Tailwind color/spacing classes; the `app-bg` design token; the `'use client'` Next.js directive (trivial to keep or drop, but it is Next-specific syntax).
-- **Application-specific:** everything in `AppHeader` besides the one mount line; everything in `app/layout.tsx` besides the provider wrapper; the backend's internal DB/Redis/GitHub-token health composition (the indicator only needs the *outer* 2xx contract, not this internal richness).
+- **Application-specific:** everything in `AppHeader` besides the one mount line; everything in `app/layout.tsx` besides the provider wrapper; the backend's internal DB/Redis/GitHub-token health composition (the indicator only needs the _outer_ 2xx contract, not this internal richness).
 - **Unclear / requires further investigation:** see §19 below.
 
 ---
@@ -953,4 +967,4 @@ Application adapter  [what a host app must supply]
 
 ---
 
-*End of dossier. This document describes the implementation exactly as found in `Kashif-Rezwi/code-review-agent` at the time of inspection — no source files were modified, refactored, or reorganized in the process of producing it.*
+_End of dossier. This document describes the implementation exactly as found in `Kashif-Rezwi/code-review-agent` at the time of inspection — no source files were modified, refactored, or reorganized in the process of producing it._

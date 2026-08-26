@@ -49,16 +49,16 @@ The Phase 0 research is authoritative: `docs/research/research-report.md` and
 
 Available once Phase 1 scaffolding lands (keep this table in sync with `package.json`):
 
-| Command | Purpose |
-|---|---|
-| `pnpm install` | install dependencies |
-| `pnpm build` | build all exports to `dist/` via tsup |
-| `pnpm test` | run Vitest suite |
-| `pnpm test:coverage` | coverage run (gate: ≥90% on `src/core/`) |
-| `pnpm lint` | ESLint |
-| `pnpm format:check` | Prettier check |
-| `pnpm typecheck` | `tsc --noEmit` |
-| `pnpm verify` | format check → lint → typecheck → test → build (definition of done) |
+| Command              | Purpose                                                             |
+| -------------------- | ------------------------------------------------------------------- |
+| `pnpm install`       | install dependencies                                                |
+| `pnpm build`         | build all exports to `dist/` via tsup                               |
+| `pnpm test`          | run Vitest suite                                                    |
+| `pnpm test:coverage` | coverage run (gate: ≥90% on `src/core/`)                            |
+| `pnpm lint`          | ESLint                                                              |
+| `pnpm format:check`  | Prettier check                                                      |
+| `pnpm typecheck`     | `tsc --noEmit`                                                      |
+| `pnpm verify`        | format check → lint → typecheck → test → build (definition of done) |
 
 ## Development workflow
 

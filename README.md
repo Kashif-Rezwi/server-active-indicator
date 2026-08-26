@@ -12,16 +12,16 @@ Built for free-tier deployments on Render, Railway, Fly.io, Koyeb, and any cold-
 
 ## Status
 
-| Phase | State |
-|---|---|
+| Phase                                 | State   |
+| ------------------------------------- | ------- |
 | Phase 0 — Research & repository setup | ✅ Done |
-| Phase 1 — Architecture & scaffold | 🔜 Next |
+| Phase 1 — Architecture & scaffold     | 🔜 Next |
 
 ## Why this exists
 
 Frontend apps on free-tier hosting (e.g. Render) load instantly from a CDN while the backend may be spun down after inactivity. The first API request can hang for up to a minute while the service wakes — and nothing in the UI explains why. Users assume the app is broken.
 
-This package detects that state and communicates it honestly: *"The server is starting up — this can take up to a minute on first visit."*
+This package detects that state and communicates it honestly: _"The server is starting up — this can take up to a minute on first visit."_
 
 ## License
 

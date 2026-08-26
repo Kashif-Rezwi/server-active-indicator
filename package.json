@@ -1,0 +1,95 @@
+{
+  "name": "server-active-indicator",
+  "version": "0.0.0",
+  "description": "A tiny, framework-agnostic client-side status indicator for backends that sleep — tells users your app is waking up instead of looking broken.",
+  "keywords": [
+    "server-status",
+    "health-check",
+    "cold-start",
+    "render",
+    "free-tier",
+    "backend",
+    "react",
+    "status-indicator",
+    "spin-down",
+    "serverless"
+  ],
+  "homepage": "https://github.com/Kashif-Rezwi/server-active-indicator",
+  "bugs": "https://github.com/Kashif-Rezwi/server-active-indicator/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Kashif-Rezwi/server-active-indicator.git"
+  },
+  "license": "MIT",
+  "author": "Kashif Rezwi",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./react": {
+      "types": "./dist/react/index.d.ts",
+      "import": "./dist/react/index.js",
+      "require": "./dist/react/index.cjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "unpkg": "./dist/server-active-indicator.iife.global.js",
+  "jsdelivr": "./dist/server-active-indicator.iife.global.js",
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "tsc --noEmit",
+    "verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build"
+  },
+  "peerDependencies": {
+    "react": "^17.0.0 || ^18.0.0 || ^19.0.0",
+    "react-dom": "^17.0.0 || ^18.0.0 || ^19.0.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    },
+    "react-dom": {
+      "optional": true
+    }
+  },
+  "packageManager": "pnpm@11.24.0",
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.5",
+    "@vitest/coverage-v8": "^4.1.11",
+    "eslint": "^10.9.1",
+    "eslint-config-prettier": "^10.1.8",
+    "jsdom": "^30.0.1",
+    "prettier": "^3.9.6",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.68.0",
+    "vitest": "^4.1.11"
+  }
+}

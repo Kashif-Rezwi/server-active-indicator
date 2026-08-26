@@ -16,12 +16,12 @@ Legend: ✅ done · 🔶 in progress · ⬜ not started
 - **Output:** `docs/research/` (dossier + research report), `AGENTS.md`, `docs/development.md`, this roadmap, GitHub milestones.
 - **Gate:** direction approved by maintainer. ✅
 
-## Phase 1 — Architecture & scaffold — ⬜
+## Phase 1 — Architecture & scaffold — ✅
 
 - **Objective:** buildable, typecheckable package skeleton with the locked toolchain.
-- **Tasks:** `pnpm init`; `package.json` with `"."` (core) and `"./react"` subpath exports; strict `tsconfig`; tsup config (ESM + CJS + DTS + IIFE); ESLint 9 flat config + Prettier; `verify` script composing format/lint/typecheck/test/build; empty `src/core/`, `src/react/` module shells.
-- **Decisions:** single package with subpath exports (no monorepo); tsup 8.x; zero runtime deps.
-- **Validation:** `pnpm build` emits `dist/`; `pnpm verify` green; `pnpm pack` tarball contains only intended files.
+- **Tasks:** `pnpm init`; `package.json` with `"."` (core) and `"./react"` subpath exports; strict `tsconfig`; tsup config (ESM + CJS + DTS + IIFE); ESLint flat config + Prettier; `verify` script composing format/lint/typecheck/test/build; `src/core/`, `src/react/` module shells.
+- **Decisions:** single package with subpath exports (no monorepo); tsup 8.5; zero runtime deps; TypeScript pinned to ^5.9 (tsup's d.ts toolchain incompatible with TS 7).
+- **Validation:** ✅ `pnpm verify` green (format→lint→typecheck→3 tests→build); `pnpm pack` tarball = dist + README + LICENSE only; built core imports from Node ESM and CJS without react resolvable.
 - **Spec:** `docs/specs/phase-1-scaffold.md`
 
 ## Phase 2 — Extract & generalize — ⬜
