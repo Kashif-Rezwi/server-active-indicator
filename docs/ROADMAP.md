@@ -81,11 +81,12 @@ Legend: ✅ done · 🔶 in progress · ⬜ not started
 - **Spec:** `docs/specs/phase-8-demo-application.md`
 - **Depends on:** Phases 5, 7.
 
-## Phase 9 — Packaging — ⬜
+## Phase 9 — Packaging — ✅
 
 - **Objective:** publishable artifact.
-- **Tasks:** changesets init; `files`/`exports`/`sideEffects: false` audit; bundle-size budget check (<5 KB gzip total target); LICENSE/README in tarball.
-- **Validation:** `pnpm pack` inspected; `publint` clean.
+- **Tasks:** ✅ changesets initialized (`@changesets/cli` 3.x, `access: "public"`, `baseBranch: "main"`, non-interactive config written directly — v3 `init` prompts); ✅ exports audit — per-format `types` conditions (`import` → `.d.ts`, `require` → `.d.cts`) for both subpaths so CJS consumers under `nodenext` no longer resolve ESM types; `sideEffects: false` confirmed safe (style injection is effect-time, not module-evaluation); ✅ bundle-size budget gate (`scripts/check-size.mjs`, zero-dep node zlib; budgets: core ≤3.5 KB, react ≤7 KB, IIFE ≤3 KB gzip — the roadmap's "<5 KB total" target predates the Phase 5 UI; per-export budgets documented in the spec); ✅ `publint` gate (`pnpm lint:pkg`); both gates wired into `pnpm verify` after `build`.
+- **Validation:** ✅ `publint` clean ("All good!"); `pnpm size` passes (core 2.86 KB, react 5.90 KB, IIFE 2.23 KB gzip); `pnpm pack` tarball inspected — exactly `dist/**` + `package.json` + `README.md` + `LICENSE`, IIFE filename matches `unpkg`/`jsdelivr` fields, no examples/docs/tests leakage; `pnpm verify` green with the new gates; AGENTS.md commands table synced.
+- **Spec:** `docs/specs/phase-9-packaging.md`
 - **Depends on:** Phase 6.
 
 ## Phase 10 — CI/CD — ⬜

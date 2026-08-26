@@ -24,6 +24,14 @@ export default tseslint.config(
     },
   },
   {
+    // Plain-JS node scripts (e.g. scripts/check-size.mjs): TS files get
+    // no-undef relief from tseslint; .mjs files need node globals declared.
+    files: ["scripts/**/*.mjs"],
+    languageOptions: {
+      globals: { console: "readonly", process: "readonly" },
+    },
+  },
+  {
     // React adapter and its tests: hooks correctness.
     files: ["src/react/**/*.{ts,tsx}", "tests/**/*.tsx"],
     plugins: { "react-hooks": reactHooks },

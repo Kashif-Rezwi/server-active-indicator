@@ -50,17 +50,20 @@ The Phase 0 research is authoritative: `docs/research/research-report.md` and
 
 Available once Phase 1 scaffolding lands (keep this table in sync with `package.json`):
 
-| Command                     | Purpose                                                        |
-| --------------------------- | -------------------------------------------------------------- |
-| `pnpm install`              | install dependencies                                           |
-| `pnpm build`                | build all exports to `dist/` via tsup                          |
-| `pnpm test`                 | run Vitest suite (fast feedback; no coverage)                  |
-| `pnpm test:coverage`        | coverage run; enforces the `src/core/**` gate (≥90/90/90/85)   |
-| `pnpm fixture:sleep-server` | run the sleeping-server fixture standalone (Phase 8 demo seed) |
-| `pnpm lint`                 | ESLint                                                         |
-| `pnpm format:check`         | Prettier check                                                 |
-| `pnpm typecheck`            | `tsc --noEmit`                                                 |
-| `pnpm verify`               | format check → lint → typecheck → test:coverage → build (DoD)  |
+| Command                     | Purpose                                                                   |
+| --------------------------- | ------------------------------------------------------------------------- |
+| `pnpm install`              | install dependencies                                                      |
+| `pnpm build`                | build all exports to `dist/` via tsup                                     |
+| `pnpm test`                 | run Vitest suite (fast feedback; no coverage)                             |
+| `pnpm test:coverage`        | coverage run; enforces the `src/core/**` gate (≥90/90/90/85)              |
+| `pnpm fixture:sleep-server` | run the sleeping-server fixture standalone (Phase 8 demo seed)            |
+| `pnpm lint`                 | ESLint                                                                    |
+| `pnpm lint:pkg`             | publint — package/exports correctness (needs `dist/`)                     |
+| `pnpm size`                 | bundle-size budget gate on built output (needs `dist/`)                   |
+| `pnpm changeset`            | record a user-facing change for the release workflow                      |
+| `pnpm format:check`         | Prettier check                                                            |
+| `pnpm typecheck`            | `tsc --noEmit`                                                            |
+| `pnpm verify`               | format → lint → typecheck → test:coverage → build → size → lint:pkg (DoD) |
 
 ## Development workflow
 
