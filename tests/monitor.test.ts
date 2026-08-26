@@ -1,9 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createMonitor } from "../src/core/monitor";
+import { __engineCount } from "../src/core/registry";
 import type { MonitorSnapshot } from "../src/core/types";
 
 const URL = "https://api.example.com/health";
+let testUrlCounter = 0;
 
 /** Collect every snapshot a monitor emits. */
 function track(m: ReturnType<typeof createMonitor>) {
@@ -39,14 +41,18 @@ function fetchRejecting(ms: number) {
 describe("createMonitor", () => {
   beforeEach(() => {
     vi.useFakeTimers();
+    // Deterministic jitter: 0.8 + 0.5 * 0.4 = 1.0 exactly.
+    vi.spyOn(Math, "random").mockReturnValue(0.5);
   });
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
     vi.useRealTimers();
   });
 
   it("throws without healthUrl or check", () => {
     expect(() => createMonitor({})).toThrow(/healthUrl.*check/);
+    expect(__engineCount()).toBe(0); // the throw must not leak an engine
   });
 
   it("warm first ping: unknown → checking → active, wasCold=false", async () => {
@@ -80,7 +86,12 @@ describe("createMonitor", () => {
           }),
       ),
     );
-    const m = createMonitor({ healthUrl: URL, revealDelay: 3_000, pollInterval: 5_000 });
+    const m = createMonitor({
+      healthUrl: URL,
+      revealDelay: 3_000,
+      pollInterval: 5_000,
+      backoffFactor: 1,
+    });
     const seen = track(m);
 
     await vi.advanceTimersByTimeAsync(60); // first attempt fails
@@ -135,7 +146,12 @@ describe("createMonitor", () => {
           }),
       ),
     );
-    const m = createMonitor({ healthUrl: URL, revealDelay: 10, pollInterval: 5_000 });
+    const m = createMonitor({
+      healthUrl: URL,
+      revealDelay: 10,
+      pollInterval: 5_000,
+      backoffFactor: 1,
+    });
     await vi.advanceTimersByTimeAsync(100);
     expect(m.getSnapshot().status).toBe("waking"); // 502 is request-failed → waking
     await vi.advanceTimersByTimeAsync(5_000 + 100);
@@ -150,6 +166,7 @@ describe("createMonitor", () => {
       revealDelay: 100,
       pollInterval: 1_000,
       offlineAfter: 3_000,
+      backoffFactor: 1,
     });
     await vi.advanceTimersByTimeAsync(200);
     expect(m.getSnapshot().status).toBe("waking");
@@ -201,7 +218,12 @@ describe("createMonitor", () => {
           }),
       ),
     );
-    const m = createMonitor({ healthUrl: URL, revealDelay: 100, pollInterval: 5_000 });
+    const m = createMonitor({
+      healthUrl: URL,
+      revealDelay: 100,
+      pollInterval: 5_000,
+      backoffFactor: 1,
+    });
     await vi.advanceTimersByTimeAsync(200); // first fail → waking (episode clock starts at t=50)
     expect(m.getSnapshot().status).toBe("waking");
     await vi.advanceTimersByTimeAsync(3_000); // ~3s of ticking (clock started at t=50 → 2 full s)
@@ -245,6 +267,198 @@ describe("createMonitor", () => {
     expect(m.getSnapshot().status).toBe("active");
     expect(check).toHaveBeenCalled();
     expect(fetchMock).not.toHaveBeenCalled(); // custom check won over healthUrl
+    m.destroy();
+  });
+});
+
+describe("phase 3 policies", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    // Deterministic jitter: 0.8 + 0.5 * 0.4 = 1.0 exactly.
+    vi.spyOn(Math, "random").mockReturnValue(0.5);
+  });
+  // Unique healthUrl per test → a fresh, isolated engine (no cross-test sharing).
+  // Generated AFTER the random spy so it doesn't consume the pinned 0.5 sequence.
+  let testUrl = "";
+  beforeEach(() => {
+    testUrl = `${URL}?t=${testUrlCounter++}`;
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
+    // Restore jsdom's default visibility if a test overrode it.
+    Object.defineProperty(document, "visibilityState", { value: "visible", configurable: true });
+    if (__engineCount() !== 0) {
+      throw new Error(`leaked ${__engineCount()} engine(s) into the registry`);
+    }
+  });
+
+  const setVisibility = (state: "visible" | "hidden") => {
+    Object.defineProperty(document, "visibilityState", { value: state, configurable: true });
+    document.dispatchEvent(new Event("visibilitychange"));
+  };
+
+  it("backs off retries by backoffFactor (jitter pinned to 1.0)", async () => {
+    vi.stubGlobal("fetch", fetchRejecting(50));
+    const m = createMonitor({
+      healthUrl: testUrl,
+      revealDelay: 10,
+      pollInterval: 1_000,
+      backoffFactor: 2,
+      backoffCap: 100_000,
+      offlineAfter: 60_000,
+    });
+    const calls = () => vi.mocked(fetch).mock.calls.length;
+
+    await vi.advanceTimersByTimeAsync(60); // attempt 1 fails at t=50; cf=1 → +1000
+    expect(calls()).toBe(1);
+    await vi.advanceTimersByTimeAsync(1_060); // attempt 2 at t≈1050 fails at t≈1100; cf=2 → +2000
+    expect(calls()).toBe(2);
+    await vi.advanceTimersByTimeAsync(1_000); // t≈2120: attempt 3 not due until t≈3100
+    expect(calls()).toBe(2);
+    await vi.advanceTimersByTimeAsync(1_000); // t≈3120: attempt 3 fired; cf=3 → +4000
+    expect(calls()).toBe(3);
+    await vi.advanceTimersByTimeAsync(4_100); // t≈7220: attempt 4 fired at t≈7150
+    expect(calls()).toBe(4);
+    m.destroy();
+  });
+
+  it("caps the retry delay at backoffCap", async () => {
+    vi.stubGlobal("fetch", fetchRejecting(50));
+    const m = createMonitor({
+      healthUrl: testUrl,
+      revealDelay: 10,
+      pollInterval: 1_000,
+      backoffFactor: 2,
+      backoffCap: 1_500,
+      offlineAfter: 60_000,
+    });
+    const calls = () => vi.mocked(fetch).mock.calls.length;
+
+    await vi.advanceTimersByTimeAsync(60); // attempt 1 fails; +1000
+    await vi.advanceTimersByTimeAsync(1_060); // attempt 2 fails at t≈1100; min(2000, 1500) → +1500
+    expect(calls()).toBe(2);
+    await vi.advanceTimersByTimeAsync(1_560); // attempt 3 at t≈2600 (would be 3100 uncapped)
+    expect(calls()).toBe(3);
+    m.destroy();
+  });
+
+  it("still bounds waking by offlineAfter despite backoff", async () => {
+    vi.stubGlobal("fetch", fetchRejecting(50));
+    const m = createMonitor({
+      healthUrl: testUrl,
+      revealDelay: 10,
+      pollInterval: 1_000,
+      backoffFactor: 2,
+      offlineAfter: 3_000,
+    });
+    await vi.advanceTimersByTimeAsync(60); // episode starts at t=50
+    expect(m.getSnapshot().status).toBe("waking");
+    await vi.advanceTimersByTimeAsync(4_500); // next retry is backoff-delayed; it observes the bound
+    expect(m.getSnapshot().status).toBe("offline");
+    m.destroy();
+  });
+
+  it("pauses polling while the tab is hidden and re-checks immediately on visible", async () => {
+    vi.stubGlobal("fetch", fetchRejecting(50));
+    const m = createMonitor({
+      healthUrl: testUrl,
+      revealDelay: 10,
+      pollInterval: 1_000,
+      backoffFactor: 1,
+      offlineAfter: 60_000,
+    });
+    const calls = () => vi.mocked(fetch).mock.calls.length;
+
+    await vi.advanceTimersByTimeAsync(60); // attempt 1 fails → waking, poll scheduled
+    expect(calls()).toBe(1);
+
+    setVisibility("hidden"); // cancels the pending poll
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(calls()).toBe(1); // no attempts while hidden
+
+    setVisibility("visible"); // immediate fresh attempt
+    await vi.advanceTimersByTimeAsync(60);
+    expect(calls()).toBe(2);
+    expect(m.getSnapshot().status).toBe("waking");
+    m.destroy();
+  });
+
+  it("pauseWhenHidden: false keeps polling in a hidden tab", async () => {
+    vi.stubGlobal("fetch", fetchRejecting(50));
+    const m = createMonitor({
+      healthUrl: testUrl,
+      revealDelay: 10,
+      pollInterval: 1_000,
+      backoffFactor: 1,
+      offlineAfter: 60_000,
+      pauseWhenHidden: false,
+    });
+    const calls = () => vi.mocked(fetch).mock.calls.length;
+
+    await vi.advanceTimersByTimeAsync(60);
+    expect(calls()).toBe(1);
+    setVisibility("hidden");
+    await vi.advanceTimersByTimeAsync(2_200); // two more polls fire while hidden
+    expect(calls()).toBeGreaterThanOrEqual(3);
+    m.destroy();
+  });
+
+  it("activeCheckInterval detects re-sleep: active → waking → active", async () => {
+    let mode: "ok" | "down" = "ok";
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        () =>
+          new Promise<Response>((resolve, reject) => {
+            setTimeout(
+              () => (mode === "ok" ? resolve(res(200)) : reject(new TypeError("down"))),
+              50,
+            );
+          }),
+      ),
+    );
+    const m = createMonitor({
+      healthUrl: testUrl,
+      revealDelay: 10,
+      pollInterval: 1_000,
+      backoffFactor: 1,
+      activeCheckInterval: 2_000,
+    });
+
+    await vi.advanceTimersByTimeAsync(100); // warm → active at t=50
+    expect(m.getSnapshot().status).toBe("active");
+
+    mode = "down";
+    await vi.advanceTimersByTimeAsync(2_100); // interval re-check at t≈2050 fails at t≈2100
+    expect(m.getSnapshot().status).toBe("waking");
+    expect(m.getSnapshot().wasCold).toBe(true);
+
+    mode = "ok";
+    await vi.advanceTimersByTimeAsync(1_100); // next poll recovers
+    expect(m.getSnapshot().status).toBe("active");
+    m.destroy();
+  });
+
+  it("does not re-check on an interval when activeCheckInterval is 0 (default)", async () => {
+    vi.stubGlobal("fetch", fetchResolving(50, 200));
+    const m = createMonitor({ healthUrl: testUrl, revealDelay: 10 });
+    await vi.advanceTimersByTimeAsync(100);
+    expect(m.getSnapshot().status).toBe("active");
+    const calls = vi.mocked(fetch).mock.calls.length;
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(vi.mocked(fetch).mock.calls.length).toBe(calls); // silent while active
+    m.destroy();
+  });
+
+  it("is SSR-safe: no document/navigator globals → policies no-op, engine still works", async () => {
+    vi.stubGlobal("fetch", fetchResolving(50, 200));
+    vi.stubGlobal("document", undefined);
+    vi.stubGlobal("navigator", undefined);
+    const m = createMonitor({ healthUrl: testUrl, revealDelay: 10 });
+    await vi.advanceTimersByTimeAsync(100);
+    expect(m.getSnapshot().status).toBe("active");
     m.destroy();
   });
 });

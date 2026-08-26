@@ -33,12 +33,13 @@ Legend: ✅ done · 🔶 in progress · ⬜ not started
 - **Validation:** ✅ 12 monitor tests + 3 smoke tests green (warm ping, cold start, reveal threshold, 4xx fast-path, Railway 502-on-wake, offlineAfter bound, browser-offline, refresh-from-offline, destroy mid-flight, custom `check()`); `pnpm verify` green.
 - **Depends on:** Phase 1. **Spec:** `docs/specs/phase-2-extract-generalize.md`
 
-## Phase 3 — Core state engine — ⬜
+## Phase 3 — Core state engine — ✅
 
 - **Objective:** the heart of the package — state machine + shared monitor.
-- **Tasks:** 5-state machine (`unknown → checking → waking → active | offline`, plus `active → checking → waking` re-sleep); reveal threshold vs. per-attempt timeout as separate concepts; `offlineAfter` bound; backoff with jitter; module-level monitor registry keyed by config (N subscribers = 1 health loop); single-flight refresh; `AbortController` lifecycle; `document.visibilitychange` pause; `navigator.onLine` mapping; `reason` field (`slow-response | request-failed | http-error`).
-- **Validation:** Vitest suite with fake timers covering every transition and the §12-style network matrix; ≥90% coverage on `src/core/`.
-- **Depends on:** Phase 2.
+- **Tasks:** ✅ 5-state machine with re-sleep path; reveal threshold vs. per-attempt timeout separated; `offlineAfter` bound; **backoff with jitter** (`backoffFactor` 1.5, `backoffCap` 15s, ±20% jitter, injectable `random` seam); **module-level registry** keyed by behavioral config (N subscribers = 1 health loop, refcounted, per-consumer handles); single-flight refresh; `AbortController` lifecycle; **`document.visibilitychange` pause** (cancel poll while hidden, immediate re-check on visible); `navigator.onLine` mapping; opt-in **`activeCheckInterval`** re-sleep detection; `reason` field. Custom `check` shares only via explicit `key`.
+- **Output:** `src/core/engine.ts` (shared engine), `src/core/registry.ts` (dedup + handles), `monitor.ts` now delegates to the registry.
+- **Validation:** ✅ 29 tests green (12 monitor transitions + 6 registry dedup/refcount + 8 phase-3 policy tests + 3 smoke); `pnpm verify` green; `src/core/` line coverage **93%** (engine 95%, registry 95%; `types.ts` is type-only). Hard ≥90% threshold deferred to Phase 6 per plan.
+- **Depends on:** Phase 2. **Spec:** `docs/specs/phase-3-core-engine.md`
 
 ## Phase 4 — React layer — ⬜
 

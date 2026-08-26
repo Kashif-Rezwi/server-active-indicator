@@ -14,6 +14,8 @@ export const DEFAULT_CONFIG = {
   successDisplayMs: 2_500,
   activeCheckInterval: 0,
   pauseWhenHidden: true,
+  backoffFactor: 1.5,
+  backoffCap: 15_000,
 } as const satisfies Required<
   Pick<
     MonitorConfig,
@@ -24,5 +26,7 @@ export const DEFAULT_CONFIG = {
     | "successDisplayMs"
     | "activeCheckInterval"
     | "pauseWhenHidden"
+    | "backoffFactor"
+    | "backoffCap"
   >
 >;
