@@ -100,4 +100,19 @@ describe("shared monitor registry", () => {
     expect(bSeen.length).toBeGreaterThan(0);
     b.destroy();
   });
+
+  it("destroy() is idempotent (second call is a no-op)", () => {
+    const a = createMonitor({ healthUrl: URL });
+    a.destroy();
+    expect(() => a.destroy()).not.toThrow();
+    expect(__engineCount()).toBe(0);
+  });
+
+  it("stops sharing once one of the differing options changes (e.g. headers)", () => {
+    const a = createMonitor({ healthUrl: URL });
+    const b = createMonitor({ healthUrl: URL, headers: { authorization: "Bearer x" } });
+    expect(__engineCount()).toBe(2);
+    a.destroy();
+    b.destroy();
+  });
 });

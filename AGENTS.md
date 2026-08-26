@@ -39,8 +39,9 @@ The Phase 0 research is authoritative: `docs/research/research-report.md` and
 - **Language:** TypeScript (strict mode)
 - **Package manager:** pnpm (11.x)
 - **Build:** tsup 8.x → ESM + CJS + `.d.ts` + IIFE (for unpkg/jsDelivr)
-- **Test:** Vitest 3 + React Testing Library + axe-core; fake timers for the state
-  machine; jsdom for component tests
+- **Test:** Vitest 4 + React Testing Library + axe-core; fake timers for the state
+  machine; jsdom for component tests; one real-network suite (sleeping-server
+  fixture) in node environment.
 - **Lint/format:** ESLint 9 (flat config) + Prettier
 - **Versioning/releases:** changesets 3 + GitHub Actions with npm OIDC trusted
   publishing (no long-lived npm tokens)
@@ -49,16 +50,17 @@ The Phase 0 research is authoritative: `docs/research/research-report.md` and
 
 Available once Phase 1 scaffolding lands (keep this table in sync with `package.json`):
 
-| Command              | Purpose                                                             |
-| -------------------- | ------------------------------------------------------------------- |
-| `pnpm install`       | install dependencies                                                |
-| `pnpm build`         | build all exports to `dist/` via tsup                               |
-| `pnpm test`          | run Vitest suite                                                    |
-| `pnpm test:coverage` | coverage run (gate: ≥90% on `src/core/`)                            |
-| `pnpm lint`          | ESLint                                                              |
-| `pnpm format:check`  | Prettier check                                                      |
-| `pnpm typecheck`     | `tsc --noEmit`                                                      |
-| `pnpm verify`        | format check → lint → typecheck → test → build (definition of done) |
+| Command                     | Purpose                                                        |
+| --------------------------- | -------------------------------------------------------------- |
+| `pnpm install`              | install dependencies                                           |
+| `pnpm build`                | build all exports to `dist/` via tsup                          |
+| `pnpm test`                 | run Vitest suite (fast feedback; no coverage)                  |
+| `pnpm test:coverage`        | coverage run; enforces the `src/core/**` gate (≥90/90/90/85)   |
+| `pnpm fixture:sleep-server` | run the sleeping-server fixture standalone (Phase 8 demo seed) |
+| `pnpm lint`                 | ESLint                                                         |
+| `pnpm format:check`         | Prettier check                                                 |
+| `pnpm typecheck`            | `tsc --noEmit`                                                 |
+| `pnpm verify`               | format check → lint → typecheck → test:coverage → build (DoD)  |
 
 ## Development workflow
 

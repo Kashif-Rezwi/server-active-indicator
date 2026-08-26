@@ -56,12 +56,13 @@ Legend: ✅ done · 🔶 in progress · ⬜ not started
 - **Validation:** ✅ 21 ServerStatus tests (RTL + axe-core, zero violations across waking/active/offline/browser-offline/pill) + 46 prior tests green; `pnpm verify` green; `dist/react/index.js` 6.04 KB gzip (delta over Phase 4: 2.39 KB gzip — the 2 KB layer _delta_ budget slips by ~0.4 KB primarily because the injected stylesheet carries 3 named color tokens × light/dark × 3 states plus motion/transition rules; the absolute core stays under 3 KB gzip).
 - **Depends on:** Phase 4. **Spec:** `docs/specs/phase-5-default-ui.md`
 
-## Phase 6 — Testing hardening — ⬜
+## Phase 6 — Testing hardening — ✅
 
 - **Objective:** confidence to publish.
-- **Tasks:** full network-condition matrix (timeout, DNS, CORS, 4xx, 5xx incl. 502-on-wake, offline browser, malformed body); coverage gate; simulated-sleeping-server fixture (express server delaying first request ~20s, with `/reset`).
-- **Validation:** CI green with coverage thresholds.
-- **Depends on:** Phases 3–5.
+- **Tasks:** ✅ full network-condition matrix (timeout, DNS/CORS, 4xx, 5xx incl. 502-on-wake, offline browser, malformed body) split across `tests/check.test.ts` (defaultCheck HTTP contract, 21 tests) and `tests/network-matrix.test.ts` (engine-level, 12 tests); coverage gate wired into `vitest.config.ts` (per-glob `src/core/**`: 90% lines/functions/statements, 85% branches) and into `pnpm verify`; simulated-sleeping-server fixture (`examples/sleeping-server/`, express, ephemeral-port `startServer()`, `POST /reset` to re-arm) plus a real-fetch integration suite (`tests/fixture.integration.test.ts`, 3 tests, `// @vitest-environment node`); `pnpm fixture:sleep-server` script for the Phase 8 demo seed; two targeted coverage tests for `engine.ts` browser-offline race and active-interval pause/resume; two registry coverage tests (idempotent destroy, headers-as-key).
+- **Decisions captured in spec:** `check.test.ts` separate from `network-matrix.test.ts` for fast feedback on the pure-function path; vitest 4 fake timers do not drive `AbortSignal.timeout` to abort `setTimeout`-based stubs, so the per-attempt timeout is fully exercised in `check.test.ts` and the engine-level test asserts the classification outcome instead of the abort firing; `tsconfig.json` `include` extended to `examples/` so the fixture is typed; coverage gate is per-glob scoped to `src/core/**` (no `src/react/` gate — DOM/axe-coupled code is harder to hit ≥90% without inflating the suite with mechanical tests, deferred).
+- **Validation:** ✅ 105 tests pass (was 67, +38); `src/core/` coverage 97.52% lines / 91.66% branches / 100% functions (gate 90/85); `check.ts` 100% across the board; `pnpm verify` exits 0 with the coverage gate enforced; bundle sizes unchanged from Phase 5 (core 2.94 KB gzip ESM, react 6.04 KB gzip ESM); `pnpm fixture:sleep-server` confirmed: first `/health` sleeps, subsequent are instant, `POST /reset` re-arms; no new runtime dependencies (express, tsx, @types/express are devDeps only); public API and state-machine unchanged.
+- **Spec:** `docs/specs/phase-6-testing-hardening.md`
 
 ## Phase 7 — Documentation — ⬜
 
