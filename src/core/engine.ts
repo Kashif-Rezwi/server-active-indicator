@@ -18,7 +18,6 @@ export type ResolvedConfig = Required<
     | "revealDelay"
     | "pollInterval"
     | "offlineAfter"
-    | "successDisplayMs"
     | "activeCheckInterval"
     | "pauseWhenHidden"
     | "backoffFactor"
@@ -228,16 +227,33 @@ export function createEngine(config: MonitorConfig, random: () => number = Math.
   const onVisibilityChange = () => {
     if (destroyed || !cfg.pauseWhenHidden) return;
     if (isDocumentHidden()) {
-      // Cancel pending poll; in-flight attempt may resolve but won't schedule while hidden.
+      // Cancel pending timers while hidden; in-flight attempt may resolve but
+      // scheduling is suppressed. Clearing revealTimer prevents a hidden-tab
+      // promotion of checking→waking. Pausing active/elapsed intervals saves
+      // wakeups and matches the "no polling while hidden" contract.
+      if (revealTimer) clearTimeout(revealTimer);
       if (pollTimer) clearTimeout(pollTimer);
-      pollTimer = null;
+      revealTimer = pollTimer = null;
+      if (activeTimer) {
+        clearInterval(activeTimer);
+        activeTimer = null;
+      }
+      if (elapsedTimer) {
+        clearInterval(elapsedTimer);
+        elapsedTimer = null;
+      }
       return;
     }
-    // Visible again: fresh check if we're mid-episode; resume active-interval.
+    // Visible again: resume elapsed ticker if needed, then fresh check or active interval.
     if (snapshot.status === "waking" || snapshot.status === "checking") {
+      ensureElapsedTicker();
       void attempt();
     } else if (snapshot.status === "active") {
+      ensureElapsedTicker();
       scheduleActiveInterval();
+    } else {
+      // unknown/offline etc — ensure ticker exists for future waking episodes
+      ensureElapsedTicker();
     }
   };
 

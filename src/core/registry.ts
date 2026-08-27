@@ -27,6 +27,11 @@ function registryKey(config: MonitorConfig): string {
     // Custom check: explicit key shares; absent key → unique (never shared).
     return config.key ? `check:${config.key}` : `check:unique:${uniqueId()}`;
   }
+  // Custom validate is a function identity like `check` — two configs with
+  // different validators must not share an engine unless they opt in via `key`.
+  if (config.validate) {
+    return config.key ? `validate:${config.key}` : `validate:unique:${uniqueId()}`;
+  }
   const behavioral: Record<string, unknown> = {
     url: config.healthUrl,
     timeout: config.timeout,

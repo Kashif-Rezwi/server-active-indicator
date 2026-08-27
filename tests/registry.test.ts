@@ -115,4 +115,77 @@ describe("shared monitor registry", () => {
     a.destroy();
     b.destroy();
   });
+
+  it("never shares different validate functions without an explicit key", () => {
+    const validateA = () => true;
+    const validateB = () => false;
+    const a = createMonitor({ healthUrl: URL, validate: validateA });
+    const b = createMonitor({ healthUrl: URL, validate: validateB });
+    expect(__engineCount()).toBe(2);
+    a.destroy();
+    b.destroy();
+    expect(__engineCount()).toBe(0);
+  });
+
+  it("shares validate functions that opt in via the same key", () => {
+    const a = createMonitor({ healthUrl: URL, validate: () => true, key: "v1" });
+    const b = createMonitor({ healthUrl: URL, validate: () => false, key: "v1" });
+    expect(__engineCount()).toBe(1);
+    a.destroy();
+    b.destroy();
+    expect(__engineCount()).toBe(0);
+  });
+
+  it("revealTimer does not promote to waking while tab is hidden", async () => {
+    // A slow fetch that would normally hit revealDelay while hidden must leave
+    // the snapshot at checking until the tab becomes visible.
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        () =>
+          new Promise<Response>((resolve) => {
+            setTimeout(() => resolve(res(200)), 5_000);
+          }),
+      ),
+    );
+    Object.defineProperty(document, "visibilityState", { value: "hidden", configurable: true });
+    document.dispatchEvent(new Event("visibilitychange"));
+
+    const m = createMonitor({ healthUrl: URL, revealDelay: 1_000 });
+    expect(m.getSnapshot().status).toBe("checking");
+    await vi.advanceTimersByTimeAsync(2_000);
+    // Still checking — revealTimer was cleared on hidden and not refired.
+    expect(m.getSnapshot().status).toBe("checking");
+
+    Object.defineProperty(document, "visibilityState", { value: "visible", configurable: true });
+    document.dispatchEvent(new Event("visibilitychange"));
+    // Fresh attempt kicked on visible; let it resolve.
+    await vi.advanceTimersByTimeAsync(5_100);
+    expect(m.getSnapshot().status).toBe("active");
+
+    Object.defineProperty(document, "visibilityState", { value: "visible", configurable: true });
+    m.destroy();
+  });
+
+  it("clears active interval while hidden and resumes on visible", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(res(200)));
+    const m = createMonitor({ healthUrl: URL, activeCheckInterval: 1_000 });
+    await vi.advanceTimersByTimeAsync(50);
+    expect(m.getSnapshot().status).toBe("active");
+    const callsWhileActive = vi.mocked(fetch).mock.calls.length;
+
+    Object.defineProperty(document, "visibilityState", { value: "hidden", configurable: true });
+    document.dispatchEvent(new Event("visibilitychange"));
+    await vi.advanceTimersByTimeAsync(5_000);
+    // Active timer was paused while hidden → no additional fetches.
+    expect(vi.mocked(fetch).mock.calls.length).toBe(callsWhileActive);
+
+    Object.defineProperty(document, "visibilityState", { value: "visible", configurable: true });
+    document.dispatchEvent(new Event("visibilitychange"));
+    await vi.advanceTimersByTimeAsync(1_100);
+    expect(vi.mocked(fetch).mock.calls.length).toBeGreaterThan(callsWhileActive);
+
+    Object.defineProperty(document, "visibilityState", { value: "visible", configurable: true });
+    m.destroy();
+  });
 });

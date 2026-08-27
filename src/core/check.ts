@@ -18,6 +18,9 @@ interface ResolvedRequestConfig {
  *
  * Classification follows docs/research/research-report.md §9:
  * - 2xx          → ok
+ * - 3xx          → request-failed by default (`res.ok` is 200–299). If your
+ *                  health endpoint may redirect, provide `validate: r => r.ok || (r.status >= 300 && r.status < 400)` or `r.status < 400`.
+ *                  Render's own health probe accepts 2xx/3xx but the default stays strict.
  * - 4xx          → http-error   (won't fix itself by waking → fast-path to offline)
  * - 5xx          → request-failed (incl. Railway's documented 502-on-wake)
  * - throw/CORS/DNS/timeout-abort → request-failed

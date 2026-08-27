@@ -1,6 +1,6 @@
 # Spec: Phase 3 — Core state engine hardening (registry, backoff, visibility)
 
-**Status:** approved
+**Status:** implemented
 **Phase:** 3 — Core state engine (docs/ROADMAP.md)
 **Date:** 2026-08-26
 
@@ -37,13 +37,13 @@ Phase 2 left four explicit stubs: registry dedup, backoff multiplier,
 Module-level `Map<string, EngineEntry>` where `EngineEntry = { engine, refs }`.
 
 - **Key**: stable serialization of the _behavioral_ config — `healthUrl` (or a
-  user-supplied `key` for custom `check`), plus the timing/validation options that
+  user-supplied `key` for custom `check`/`validate`), plus the timing/validation options that
   change behavior. Identical effective config shares; differing `revealDelay`/`timeout`/
   etc. get separate engines.
-- **Custom `check` dedup problem**: functions aren't serializable. For `check`, the key
+- **Custom `check`/`validate` dedup problem**: functions aren't serializable. For `check` or `validate`, the key
   is an explicit optional `key?: string` on config; if absent, each `createMonitor`
-  with a custom `check` gets its **own** engine (documented — sharing custom checks
-  requires an explicit key).
+  with a custom `check`/`validate` gets its **own** engine (documented — sharing custom checks
+  requires an explicit key; same for `validate`).
 - **Refcounting**: `createMonitor` → `acquire(config)` increments; `destroy()` →
   `release()` decrements; at 0 the engine is destroyed and removed.
 - `createMonitor` returns a **per-consumer handle** (`Monitor`) proxying
@@ -72,11 +72,11 @@ delay = min(pollInterval * backoffFactor^(consecutiveFailures - 1), backoffCap) 
 
 - Engine subscribes to `document.visibilitychange` (guarded for SSR/tests where
   `document` is undefined → no-op).
-- On `hidden`: cancel the pending poll timer; an in-flight attempt may resolve but
-  _scheduling_ is suppressed (no new attempts while hidden). The episode clock is
+- On `hidden`: cancel pending `revealTimer` + `pollTimer`; pause `activeTimer`/`elapsedTimer`; an in-flight attempt may resolve but
+  _scheduling_ is suppressed (no new attempts while hidden, no hidden-tab `checking→waking` promotion). The episode clock is
   `Date.now()`-derived, so pausing timers doesn't corrupt it.
-- On `visible`: if `waking`/`checking`, immediately `attempt()` (fresh check, not a
-  stale timer); if `active` and `activeCheckInterval > 0`, resume the interval.
+- On `visible`: if `waking`/`checking`, resume `elapsedTimer` and immediately `attempt()` (fresh check, not a
+  stale timer); if `active` and `activeCheckInterval > 0`, resume `elapsedTimer` and the interval. Otherwise ensure `elapsedTimer` exists for future episodes.
 - `pauseWhenHidden: false` → no listener attached.
 
 ### 4. Active-interval re-check (`activeCheckInterval`, default 0 = off)
@@ -116,13 +116,13 @@ tests/monitor.test.ts  → extend: backoff timing, pause/visible, active-interva
 
 ## Acceptance criteria
 
-- [ ] Two `createMonitor` with identical config share one engine (one fetch loop)
-- [ ] Refcount: engine destroyed only when last consumer destroys
-- [ ] Backoff: delays grow by factor, capped, jittered; `offlineAfter` still on wall-clock
-- [ ] Hidden tab cancels polling; visible triggers immediate re-attempt
-- [ ] `activeCheckInterval` detects re-sleep (`active → waking`)
-- [ ] SSR-safe (no `document`/`navigator` guards throw)
-- [ ] `pnpm verify` green; coverage on `src/core/` measured
+- [x] Two `createMonitor` with identical config share one engine (one fetch loop)
+- [x] Refcount: engine destroyed only when last consumer destroys
+- [x] Backoff: delays grow by factor, capped, jittered; `offlineAfter` still on wall-clock
+- [x] Hidden tab cancels polling (including revealTimer → no hidden waking promotion) and pauses active/elapsed intervals; visible triggers immediate re-attempt and resumes intervals
+- [x] `activeCheckInterval` detects re-sleep (`active → waking`)
+- [x] SSR-safe (no `document`/`navigator` guards throw)
+- [x] `pnpm verify` green; coverage on `src/core/` measured (97.52% lines / 91.66% branches)
 
 ## Validation gate
 

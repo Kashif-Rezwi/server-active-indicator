@@ -9,7 +9,7 @@ reversible. Examples: typo fixes, copy tweaks, internal refactors, test addition
 dependency bumps.
 
 1. Make the change.
-2. Run `pnpm verify` (format → lint → typecheck → test → build).
+2. Run `pnpm verify` (format:check → lint → typecheck → test:coverage with `src/core/**` 90/90/90/85 gate → build → size → lint:pkg).
 3. Commit with a conventional-commit message.
 
 ## Full gear — features & architecture
@@ -23,8 +23,7 @@ not trivially reversible. All roadmap phases (see `docs/ROADMAP.md`) run in full
 2. **Decisions of record.** Anything that changes a locked decision in `AGENTS.md`
    needs an ADR (`docs/adr/_template.md`).
 3. **Implement** against the spec. Keep commits small and scoped.
-4. **Verify.** `pnpm verify` green is the definition of done. Coverage gate: ≥90% on
-   `src/core/`.
+4. **Verify.** `pnpm verify` green is the definition of done. Coverage gate: ≥90% lines/functions/statements and ≥85% branches on `src/core/**` (enforced in `vitest.config.ts`).
 5. **Close the loop.** Update the checkbox in `docs/ROADMAP.md`, the spec status, and
    any docs affected. Request review at the phase gate before starting the next phase.
 

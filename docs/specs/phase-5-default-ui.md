@@ -116,15 +116,16 @@ reactive; the monitor config is captured on mount (phase 4 spec §3).
 
 Dismissal policy (all component-local):
 
-- `useState(() => snapshot.status === "active")` initializer — a consumer that
+- `useState(true)` always-dismissed initializer + `hasSeenWakeOrOfflineRef` guard — a consumer that
   mounts after the wake already resolved starts dismissed (no stale confirmation;
-  silence-on-success holds even for late mounters like navigated-to pages).
-- Entering `waking` → `setDismissed(false)` — re-arms the confirmation for the next
+  silence-on-success holds even for late mounters like navigated-to pages). The ref
+  flips to `true` on first witnessed `waking`/`offline`, re-arming the confirmation.
+- Entering `waking`/`offline` → `hasSeenWakeOrOfflineRef.current = true; setDismissed(false)` — re-arms the confirmation for the next
   recovery (including opt-in `activeCheckInterval` re-sleep detection).
-- While `active && wasCold && !dismissed` → `setTimeout(setDismissed(true),
+- While `active && wasCold && !dismissed && hasSeenWakeOrOfflineRef.current` → `setTimeout(setDismissed(true),
 successDisplayMs)`, cleaned up on any change / unmount.
 - Warm `active` (`wasCold=false`: fast first ping, fast manual retry, fast periodic
-  re-check) → always `null`.
+  re-check) → always `null`. Late-mounters that never saw a wake stay dismissed via the ref guard.
 
 ### 3. Styling — `src/react/styles.ts`
 
@@ -225,26 +226,26 @@ tsup / vitest / eslint configs.
 
 ## Acceptance criteria
 
-- [ ] Warm backend: `<ServerStatus>` renders nothing through `checking → active`
-- [ ] Cold start: banner with locked waking copy, `role="status"`,
+- [x] Warm backend: `<ServerStatus>` renders nothing through `checking → active`
+- [x] Cold start: banner with locked waking copy, `role="status"`,
       `aria-live="polite"`, `data-state="waking"`, spinner icon, live `aria-hidden`
       counter ticking (`0s → 1s → …`, `1m 5s` formatting beyond 60s)
-- [ ] Recovery after waking: `active` copy renders, auto-hides after
+- [x] Recovery after waking: `active` copy renders, auto-hides after
       `successDisplayMs` (prop-overridable); warm `active` never renders
-- [ ] A second instance mounting into an already-active monitor renders nothing
-- [ ] Offline: copy + Retry button; click triggers a fresh attempt;
+- [x] A second instance mounting into an already-active monitor renders nothing
+- [x] Offline: copy + Retry button; click triggers a fresh attempt;
       `offlineKind="browser"` renders `browserOffline` + `data-offline-kind="browser"`
-- [ ] Pill variant: same content under `sai-pill`; `className` merged onto root
-- [ ] i18n: each of the five messages individually overridable
-- [ ] Render prop: children replaces the UI (no `sai-` markup) and no stylesheet is
+- [x] Pill variant: same content under `sai-pill`; `className` merged onto root
+- [x] i18n: each of the five messages individually overridable
+- [x] Render prop: children replaces the UI (no `sai-` markup) and no stylesheet is
       injected by that render
-- [ ] Stylesheet: exactly one `<style id="server-active-indicator-styles">` across
+- [x] Stylesheet: exactly one `<style id="server-active-indicator-styles">` across
       instances/remounts; contains `sai-` rules, `flex-wrap` + `max-width: 100%`
       (320px), `prefers-reduced-motion` block, light/dark token sets
-- [ ] axe: zero violations for waking / active / offline / browser-offline / pill
-- [ ] Registry hygiene: own-config mount → exactly one engine; unmount → zero;
+- [x] axe: zero violations for waking / active / offline / browser-offline / pill
+- [x] Registry hygiene: own-config mount → exactly one engine; unmount → zero;
       provider sharing → one engine
-- [ ] `pnpm verify` green (format → lint → typecheck → test → build)
+- [x] `pnpm verify` green (format → lint → typecheck → test:coverage → build → size → lint:pkg)
 
 ## Validation gate
 

@@ -92,6 +92,6 @@ Two gears, defined in `docs/development.md`:
 src/core/          framework-free engine (monitor registry, machine, fetch strategy)
 src/react/         React adapter (hook, provider, default UI, injected styles)
 tests/             Vitest suites
-examples/          vite-react + nextjs demos, simulated sleeping server fixture
+examples/          demo (Vite+React), demo-server (deployable API), sleeping-server (fixture)
 docs/              ROADMAP.md, research/, specs/, adr/, development.md
 ```

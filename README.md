@@ -11,7 +11,7 @@
 - **Honest by design** — never claims a server state the browser can't actually observe.
 - **Accessible out of the box** — `role="status"`, dark mode, reduced motion, themeable via CSS custom properties.
 
-<!-- TODO(phase-8): replace with the real demo GIF captured from the live demo app -->
+<!-- TODO(external:phase-8-deploy): replace docs/assets/demo-placeholder.gif with the real demo GIF captured from the live demo app after Render + static-host deploy (Phase 8 external checklist in examples/demo/README.md) -->
 
 ![Demo: the indicator appears while a cold backend starts up, then confirms and disappears](docs/assets/demo-placeholder.gif)
 

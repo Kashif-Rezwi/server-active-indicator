@@ -25,7 +25,7 @@ Locked decisions from `docs/research/research-report.md` §7, §13 and `AGENTS.m
 - tsup 8.x builds ESM + CJS + `.d.ts` per entry, plus one IIFE bundle (core only) for
   unpkg/jsDelivr consumers.
 - Zero runtime dependencies; `react`/`react-dom` are peer dependencies.
-- Vitest 3 (jsdom) + ESLint 9 flat + Prettier; pnpm 11.
+- Vitest 4 (jsdom) + ESLint 9 flat + Prettier; pnpm 11.
 
 ## Approach
 
@@ -69,8 +69,8 @@ tests/smoke.test.ts     → verifies entries import & defaults have locked value
 - `files: ["dist"]`, `publishConfig: { access: "public" }`
 - `peerDependencies: react ^17||^18||^19, react-dom ^17||^18||^19` with
   `peerDependenciesMeta` both `optional: true` (core export must not force React)
-- scripts: `build`, `test`, `test:coverage`, `lint`, `format`, `format:check`,
-  `typecheck`, `verify` (= format:check && lint && typecheck && test && build)
+- scripts: `build`, `test`, `test:coverage`, `lint`, `lint:pkg`, `size`, `format`, `format:check`,
+  `typecheck`, `verify` (= format:check && lint && typecheck && test:coverage → build → size → lint:pkg)
 
 ### TypeScript
 
@@ -131,13 +131,13 @@ export interface MonitorSnapshot {
 
 ## Acceptance criteria
 
-- [ ] `pnpm install` clean; all devDeps pinned per locked tooling
-- [ ] `pnpm verify` (format:check → lint → typecheck → test → build) green
-- [ ] `dist/` contains ESM+CJS+DTS for both entries + one minified IIFE
-- [ ] `pnpm pack` tarball contains only `dist/`, `README.md`, `LICENSE`, `package.json`
-- [ ] Built core importable from Node ESM and CJS without react installed
-- [ ] `AGENTS.md` commands table matches final scripts
-- [ ] Roadmap Phase 1 box checked
+- [x] `pnpm install` clean; all devDeps pinned per locked tooling
+- [x] `pnpm verify` (format:check → lint → typecheck → test:coverage → build → size → lint:pkg) green
+- [x] `dist/` contains ESM+CJS+DTS for both entries + one minified IIFE
+- [x] `pnpm pack` tarball contains only `dist/`, `README.md`, `LICENSE`, `package.json`
+- [x] Built core importable from Node ESM and CJS without react installed
+- [x] `AGENTS.md` commands table matches final scripts
+- [x] Roadmap Phase 1 box checked
 
 ## Validation gate
 

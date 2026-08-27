@@ -51,7 +51,8 @@ export interface MonitorConfig {
   /** Custom response validator, e.g. to reject degraded bodies. Default: `res.ok`. */
   validate?: (res: Response) => boolean;
   /** Explicit registry key. Required to share an engine across consumers when using a
-   *  custom `check` (functions aren't serializable). Ignored for `healthUrl` configs. */
+   *  custom `check` or custom `validate` (functions aren't serializable). Ignored for
+   *  plain `healthUrl` configs. */
   key?: string;
   /** Multiplier applied to the retry delay after each consecutive failure. Default: 1.5.
    *  Set to 1 for flat polling. */

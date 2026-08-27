@@ -137,21 +137,21 @@ React/react-dom are **peer dependencies** (`^17 || ^18 || ^19`). Works in Next.j
 
 Required: `healthUrl` (or `check`). Everything else defaulted:
 
-| Option                                                             | Default                 | Notes                                                                    |
-| ------------------------------------------------------------------ | ----------------------- | ------------------------------------------------------------------------ |
-| `timeout`                                                          | `10_000`                | per-attempt ceiling (Render spin-up is ~60s; don't conflate with reveal) |
-| `revealDelay`                                                      | `3_000`                 | show `waking` only if unresolved this long (proven value from dossier)   |
-| `pollInterval`                                                     | `5_000`                 | while `waking` (proven value)                                            |
-| `offlineAfter`                                                     | `60_000` elapsed        | bound on `waking` before declaring `offline`                             |
-| `retryBackoff`                                                     | 1.5×, cap 15s, jittered | applies after repeated failures                                          |
-| `successDisplayMs`                                                 | `2_500`                 | green confirmation duration (proven value)                               |
-| `activeCheckInterval`                                              | `0` (off)               | opt-in re-sleep detection                                                |
-| `pauseWhenHidden`                                                  | `true`                  | `document.visibilitychange`                                              |
-| `headers` / `credentials`                                          | none                    | explicit opt-in only                                                     |
-| `validate`                                                         | —                       | `(res: Response) => boolean` for body/degraded inspection                |
-| `onStatusChange` / `onActive` / `onOffline`                        | —                       | callbacks                                                                |
-| `storageKey`                                                       | —                       | opt-in `sessionStorage` cache (not localStorage — staleness)             |
-| UI: `variant`, `position`, `messages`, `className`, theme CSS vars | —                       |                                                                          |
+| Option                                                             | Default                    | Notes                                                                    |
+| ------------------------------------------------------------------ | -------------------------- | ------------------------------------------------------------------------ |
+| `timeout`                                                          | `10_000`                   | per-attempt ceiling (Render spin-up is ~60s; don't conflate with reveal) |
+| `revealDelay`                                                      | `3_000`                    | show `waking` only if unresolved this long (proven value from dossier)   |
+| `pollInterval`                                                     | `5_000`                    | while `waking` (proven value)                                            |
+| `offlineAfter`                                                     | `60_000` elapsed           | bound on `waking` before declaring `offline`                             |
+| `backoffFactor` / `backoffCap`                                     | 1.5×, cap 15s, ±20% jitter | applies after repeated failures (`backoffFactor: 1` = flat polling)      |
+| `successDisplayMs`                                                 | `2_500`                    | green confirmation duration (proven value)                               |
+| `activeCheckInterval`                                              | `0` (off)                  | opt-in re-sleep detection                                                |
+| `pauseWhenHidden`                                                  | `true`                     | `document.visibilitychange`                                              |
+| `headers` / `credentials`                                          | none                       | explicit opt-in only                                                     |
+| `validate`                                                         | —                          | `(res: Response) => boolean` for body/degraded inspection                |
+| `onStatusChange` / `onActive` / `onOffline`                        | —                          | callbacks                                                                |
+| `storageKey`                                                       | —                          | opt-in `sessionStorage` cache (not localStorage — staleness)             |
+| UI: `variant`, `position`, `messages`, `className`, theme CSS vars | —                          |                                                                          |
 
 DX target: install → `<ServerStatus healthUrl="…" />` working in under 3 minutes.
 
@@ -172,9 +172,8 @@ DX target: install → `<ServerStatus healthUrl="…" />` working in under 3 min
 
 Module-level monitor registry keyed by config → N components share **one** health loop;
 single-flight refresh; `AbortController` on unmount/transition/superseded attempts; no
-polling while `active` unless opted in; pause in hidden tabs; elapsed counter runs a
-single 1s interval only while visible. Bundle budget: core <3 KB gzip, react layer
-<2 KB, zero runtime deps.
+polling while `active` unless opted in; pause in hidden tabs (including `revealTimer` + `active`/`elapsed` intervals); elapsed counter runs a
+single 1s interval only while `waking` and visible (paused when hidden). Bundle budgets (per-export, post-Phase 5 UI): core ≤3.5 KB gzip, react ≤7 KB gzip, IIFE ≤3 KB gzip (actuals: core 2.86 KB, react 5.90 KB, IIFE 2.23 KB). Zero runtime deps.
 
 ## 11. Security — [decision]
 
@@ -202,7 +201,7 @@ that sleep — tells users your app is waking up instead of looking broken."_
 ## 13. Tooling — [decision]
 
 pnpm · TypeScript (strict) · **tsup 8.5.x** (ESM+CJS+DTS+IIFE in one step) ·
-**Vitest 3** + React Testing Library + axe · ESLint 9 flat + Prettier ·
+**Vitest 4** + React Testing Library + axe · ESLint 9 flat + Prettier ·
 **changesets 3** for versioning/changelogs · GitHub Actions with npm OIDC trusted
 publishing + provenance. Deliberately excluded: Turborepo/monorepo, Storybook,
 Playwright in the library (demo app only).
