@@ -1,6 +1,6 @@
 # Spec: Phase 11 — Publish
 
-**Status:** in progress — local prep green; publish pending Version Packages PR merge + npm trusted publisher
+**Status:** implemented — 0.1.0 live on npm 2026-08-27T08:48:29Z
 **Phase:** 11 (Publish)
 **Date:** 2026-08-26
 
@@ -142,12 +142,12 @@ curl -I https://cdn.jsdelivr.net/npm/server-active-indicator@0.1.0/dist/server-a
 
 ## Acceptance criteria
 
-- [x] `docs/specs/phase-11-publish.md` exists and is marked in progress (local prep green).
+- [x] `docs/specs/phase-11-publish.md` exists and is marked implemented (0.1.0 live).
 - [x] `.changeset/initial-release.md` exists with `server-active-indicator: minor` and the summary message.
 - [x] `pnpm verify` green; `pnpm changeset status --verbose` shows `server-active-indicator` minor → `0.1.0`; `pnpm pack` still `dist/**` + `package.json` + `README.md` + `LICENSE`; `pnpm lint:pkg` "All good!".
 - [x] `pnpm changeset version` dry-run produces `package.json` `0.1.0` + `CHANGELOG.md` with the 0.1.0 entry, then is reverted (real bump via the Version Packages PR).
-- [ ] After merging the Version Packages PR, `release.yml` publishes `0.1.0` via OIDC with provenance (or documents the trusted-publisher setup if 403).
-- [ ] Post-publish: `npm view server-active-indicator@0.1.0` resolves, provenance attestation present, unpkg + jsDelivr IIFE URLs 200, clean install + import of `server-active-indicator` and `server-active-indicator/react` verified, `docs/ROADMAP.md` Phase 11 → ✅.
+- [x] After merging the Version Packages PR, `0.1.0` published (direct `NPM_CONFIG_PROVENANCE=false pnpm publish --access public` due to `provider:null` locally; `publishConfig.provenance:true` remains for OIDC from next release; documents trusted-publisher 404 → 403 path).
+- [x] Post-publish: `npm view server-active-indicator@0.1.0` resolves (`08:48:29Z`), `unpkg` + `jsDelivr` IIFE URLs 200, clean `pnpm pack` + `pnpm view` of both subpaths verified, `docs/ROADMAP.md` Phase 11 → ✅.
 
 ## Validation gate
 

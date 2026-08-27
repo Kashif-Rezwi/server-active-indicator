@@ -97,10 +97,10 @@ Legend: ✅ done · 🔶 in progress · ⬜ not started
 - **Spec:** `docs/specs/phase-10-cicd.md`
 - **Depends on:** Phase 9.
 
-## Phase 11 — Publish — 🔶
+## Phase 11 — Publish — ✅
 
 - **Objective:** `server-active-indicator` live on npm.
-- **Tasks:** 🔶 initial changeset `.changeset/initial-release.md` (`minor` → `0.1.0`) with full release summary; `pnpm verify` green + `pnpm changeset status --verbose` shows `0.0.0 → 0.1.0` + dry-run `pnpm changeset version` yields `0.1.0` + `CHANGELOG.md` with `0.1.0` entry + `pnpm pack` still `dist/**` + `package.json` + `README.md` + `LICENSE` (reverted; real bump via Version Packages PR); `publint` All good!, size budgets pass. ⬜ remaining (maintainer + CI): push changeset to `main` → `release.yml` opens Version Packages PR → merge PR → `release.yml` publishes `0.1.0` via OIDC with provenance → GitHub Release/tag → verify `npm view` + provenance + `unpkg`/`jsDelivr` IIFE 200 → remove README pre-release note → dogfood `examples/demo` to published package. See `docs/specs/phase-11-publish.md` for trusted-publisher setup and post-publish checks.
+- **Tasks:** ✅ `0.1.0` published to npm (`https://www.npmjs.com/package/server-active-indicator`, `082b372` merge `b18712f chore: version packages` → `0.0.0→0.1.0` + `CHANGELOG.md`); `pnpm verify` green; `pnpm pack` `dist/**+package.json+README+LICENSE`; `publint All good`; size 2.91/5.95/2.27 KB; `npm view` + `unpkg`/`jsDelivr` IIFE 200 verified (`08:48:29Z`); README pre-release note removed. Published via direct `pnpm publish --access public` with `NPM_CONFIG_PROVENANCE=false` (provider `null` locally — provenance via OIDC from next release; `publishConfig.provenance:true` remains). ⬜ next: configure Trusted Publisher `Kashif-Rezwi/server-active-indicator/release.yml` on `https://www.npmjs.com/package/server-active-indicator/access` for OIDC `npm publish --provenance` (auto on `release.yml` merges) → GitHub Release/tag → dogfood `examples/demo` alias swap. See `docs/specs/phase-11-publish.md`.
 - **Spec:** `docs/specs/phase-11-publish.md`
 - **Depends on:** Phase 10.
 

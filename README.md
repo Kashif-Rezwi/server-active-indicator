@@ -15,8 +15,6 @@
 
 ![Demo: the indicator appears while a cold backend starts up, then confirms and disappears](docs/assets/demo-placeholder.gif)
 
-> **Pre-release note:** the package is not on npm yet (see the [roadmap](docs/ROADMAP.md) — publishing is Phase 11). Everything below documents the finished, fully tested API.
-
 ---
 
 ## The problem
