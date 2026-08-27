@@ -232,8 +232,7 @@ describe("createMonitor", () => {
     expect(m.getSnapshot().status).toBe("waking");
     await vi.advanceTimersByTimeAsync(5_000 + 100); // third poll (t≈10050) → active
     expect(m.getSnapshot().status).toBe("active");
-    // Let the ticker fire once more (it self-clears on the next tick after active),
-    // then confirm elapsed stops advancing.
+    // The ticker is cleared on the transition to active; confirm elapsed stops advancing.
     await vi.advanceTimersByTimeAsync(1_100);
     const frozen = m.getSnapshot().elapsedSeconds;
     await vi.advanceTimersByTimeAsync(3_000);
@@ -267,6 +266,41 @@ describe("createMonitor", () => {
     expect(m.getSnapshot().status).toBe("active");
     expect(check).toHaveBeenCalled();
     expect(fetchMock).not.toHaveBeenCalled(); // custom check won over healthUrl
+    m.destroy();
+  });
+
+  it("a custom check that never resolves is bounded by timeout → waking → offline", async () => {
+    const check = vi.fn(() => new Promise<boolean>(() => {})); // hangs forever
+    const m = createMonitor({
+      check,
+      timeout: 500,
+      revealDelay: 100,
+      pollInterval: 1_000,
+      offlineAfter: 2_000,
+      backoffFactor: 1,
+    });
+    await vi.advanceTimersByTimeAsync(600); // attempt hangs; timeout fires at t=500 → request-failed
+    expect(m.getSnapshot().status).toBe("waking");
+    expect(m.getSnapshot().reason).toBe("request-failed");
+    await vi.advanceTimersByTimeAsync(3_000); // retries keep timing out; offlineAfter bounds the episode
+    expect(m.getSnapshot().status).toBe("offline");
+    expect(m.getSnapshot().offlineKind).toBe("server");
+    expect(check.mock.calls.length).toBeGreaterThanOrEqual(2); // it retried, then gave up
+    m.destroy();
+  });
+
+  it("a custom check that throws synchronously fails the attempt but never wedges the engine", async () => {
+    let call = 0;
+    const check = vi.fn(() => {
+      call += 1;
+      if (call < 3) throw new Error("boom");
+      return Promise.resolve(true);
+    });
+    const m = createMonitor({ check, revealDelay: 10, pollInterval: 500, backoffFactor: 1 });
+    await vi.advanceTimersByTimeAsync(60); // first attempt throws → request-failed → waking
+    expect(m.getSnapshot().status).toBe("waking");
+    await vi.advanceTimersByTimeAsync(1_200); // attempts 2 (throws) and 3 (succeeds)
+    expect(m.getSnapshot().status).toBe("active");
     m.destroy();
   });
 });
@@ -450,6 +484,45 @@ describe("phase 3 policies", () => {
     await vi.advanceTimersByTimeAsync(60_000);
     expect(vi.mocked(fetch).mock.calls.length).toBe(calls); // silent while active
     m.destroy();
+  });
+
+  it("silence on success: a warm engine leaves no elapsed ticker running", async () => {
+    // Fake timers advance in coarse chunks, so the reveal timer and the fetch
+    // resolution land in the same tick — asserting "ticker was never *created*"
+    // is not expressible here. The behavioral contract that matters: once
+    // warm/active, no 1s ticker is left running (it self-clears on the
+    // transition out of waking). Drive a full waking→active cycle and assert
+    // the ticker is gone afterwards.
+    let call = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        () =>
+          new Promise<Response>((resolve, reject) => {
+            call += 1;
+            setTimeout(() => (call < 2 ? reject(new TypeError("down")) : resolve(res(200))), 50);
+          }),
+      ),
+    );
+    const clearIntervalSpy = vi.spyOn(globalThis, "clearInterval");
+    const m = createMonitor({
+      healthUrl: testUrl,
+      revealDelay: 10,
+      pollInterval: 500,
+      backoffFactor: 1,
+    });
+    await vi.advanceTimersByTimeAsync(100); // fail → waking (ticker starts)
+    expect(m.getSnapshot().status).toBe("waking");
+    await vi.advanceTimersByTimeAsync(600); // recover → active
+    expect(m.getSnapshot().status).toBe("active");
+    // The elapsed ticker's interval was explicitly cleared on recovery —
+    // nothing keeps firing at 1 Hz for a warm backend.
+    expect(clearIntervalSpy).toHaveBeenCalled();
+    const tickValue = m.getSnapshot().elapsedSeconds;
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(m.getSnapshot().elapsedSeconds).toBe(tickValue); // frozen: no ticker running
+    m.destroy();
+    expect(__engineCount()).toBe(0);
   });
 
   it("is SSR-safe: no document/navigator globals → policies no-op, engine still works", async () => {

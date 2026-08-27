@@ -172,4 +172,42 @@ describe("defaultCheck (HTTP contract)", () => {
     const out = await defaultCheck({ healthUrl: URL, timeout: 5_000 });
     expect(out).toEqual({ ok: false, reason: "request-failed" });
   });
+
+  it("legacy browser without AbortSignal.any → manual fallback, caller abort still yields ABORTED", async () => {
+    const originalAny = AbortSignal.any;
+    // @ts-expect-error — simulating a legacy runtime
+    delete AbortSignal.any;
+    try {
+      const fetchMock = vi.fn((_url: string, init: { signal?: AbortSignal }) => {
+        return new Promise<Response>((_resolve, reject) => {
+          init.signal?.addEventListener("abort", () =>
+            reject(new DOMException("aborted", "AbortError")),
+          );
+        });
+      });
+      vi.stubGlobal("fetch", fetchMock);
+
+      const controller = new AbortController();
+      const promise = defaultCheck({ healthUrl: URL, timeout: 60_000 }, controller.signal);
+      queueMicrotask(() => controller.abort());
+
+      const out: CheckOutcome = await promise;
+      expect(out).toBe(ABORTED);
+    } finally {
+      AbortSignal.any = originalAny;
+    }
+  });
+
+  it("legacy browser without AbortSignal.timeout → manual fallback timer still bounds the attempt", async () => {
+    const originalTimeout = AbortSignal.timeout;
+    // @ts-expect-error — simulating a legacy runtime
+    delete AbortSignal.timeout;
+    try {
+      vi.stubGlobal("fetch", fetchThatOnlyResolvesOnAbort());
+      const out = await defaultCheck({ healthUrl: URL, timeout: 1 });
+      expect(out).toEqual({ ok: false, reason: "request-failed" });
+    } finally {
+      AbortSignal.timeout = originalTimeout;
+    }
+  });
 });

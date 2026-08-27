@@ -30,7 +30,9 @@ export interface MonitorConfig {
   healthUrl?: string;
   /** Custom health check; overrides `healthUrl` when provided. */
   check?: () => Promise<boolean | CheckResult>;
-  /** Per-attempt ceiling in ms. Default: 10_000. */
+  /** Per-attempt ceiling in ms. Default: 10_000. Bounds every attempt —
+   *  `healthUrl` requests (via an abort signal) and custom `check` calls
+   *  (via a timeout race) alike, so a hung check can never wedge the engine. */
   timeout?: number;
   /** Show `waking` only if a check stays unresolved this long (ms). Default: 3_000. */
   revealDelay?: number;
@@ -38,7 +40,10 @@ export interface MonitorConfig {
   pollInterval?: number;
   /** Give up on `waking` and declare `offline` after this much elapsed time (ms). Default: 60_000. */
   offlineAfter?: number;
-  /** How long the `active` confirmation stays visible (ms). Default: 2_500. */
+  /** How long the `active` confirmation stays visible (ms). Default: 2_500.
+   *  Presentation-only: the engine never reads it — it is applied by the
+   *  default `<ServerStatus>` UI, so set it on the component's props (not on
+   *  `<ServerStatusProvider>`, where it has no effect). */
   successDisplayMs?: number;
   /** Opt-in periodic re-check while `active` to detect re-sleep (ms). Default: 0 (off). */
   activeCheckInterval?: number;

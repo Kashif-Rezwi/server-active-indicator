@@ -38,12 +38,32 @@ function isDocumentHidden(): boolean {
   return typeof document !== "undefined" && document.visibilityState === "hidden";
 }
 
-async function runCustomCheck(check: NonNullable<MonitorConfig["check"]>): Promise<CheckOutcome> {
+/**
+ * Custom checks are bounded by `timeout` like any other attempt: a check that
+ * never settles must not wedge the engine in `waking` forever (locked
+ * decision 5 — `waking` is time-bounded by `offlineAfter`, which is only
+ * enforced after a *completed* attempt).
+ */
+async function runCustomCheck(
+  check: NonNullable<MonitorConfig["check"]>,
+  timeoutMs: number,
+): Promise<CheckOutcome> {
+  let timer: ReturnType<typeof setTimeout> | null = null;
   try {
-    const r = await check();
+    const r = await Promise.race([
+      check(),
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(
+          () => reject(new Error("server-active-indicator: custom check timed out")),
+          timeoutMs,
+        );
+      }),
+    ]);
     return typeof r === "boolean" ? { ok: r } : r;
   } catch {
     return { ok: false, reason: "request-failed" };
+  } finally {
+    if (timer) clearTimeout(timer);
   }
 }
 
@@ -100,6 +120,11 @@ export function createEngine(config: MonitorConfig, random: () => number = Math.
     activeTimer = null;
   };
 
+  const stopElapsedTicker = () => {
+    if (elapsedTimer) clearInterval(elapsedTimer);
+    elapsedTimer = null;
+  };
+
   const ensureElapsedTicker = () => {
     if (elapsedTimer) return;
     elapsedTimer = setInterval(() => {
@@ -109,7 +134,7 @@ export function createEngine(config: MonitorConfig, random: () => number = Math.
   };
 
   const runCheck = (): Promise<CheckOutcome> => {
-    if (config.check) return runCustomCheck(config.check);
+    if (config.check) return runCustomCheck(config.check, cfg.timeout);
     return defaultCheck(
       {
         healthUrl: cfg.healthUrl!,
@@ -135,6 +160,7 @@ export function createEngine(config: MonitorConfig, random: () => number = Math.
     if (destroyed) return;
     const elapsed = episodeStartAt === null ? 0 : Date.now() - episodeStartAt;
     if (elapsed >= cfg.offlineAfter) {
+      stopElapsedTicker();
       setSnapshot({ status: "offline", offlineKind: "server" });
       return;
     }
@@ -147,6 +173,7 @@ export function createEngine(config: MonitorConfig, random: () => number = Math.
 
     if (outcome.ok) {
       clearAttemptTimers();
+      stopElapsedTicker();
       episodeStartAt = null;
       consecutiveFailures = 0;
       setSnapshot({
@@ -164,18 +191,21 @@ export function createEngine(config: MonitorConfig, random: () => number = Math.
     if (reason === "http-error") {
       clearAttemptTimers();
       stopActiveTimer();
+      stopElapsedTicker();
       setSnapshot({ status: "offline", reason, lastCheckedAt: Date.now(), offlineKind: "server" });
       return;
     }
     if (isBrowserOffline()) {
       clearAttemptTimers();
       stopActiveTimer();
+      stopElapsedTicker();
       setSnapshot({ status: "offline", reason, lastCheckedAt: Date.now(), offlineKind: "browser" });
       return;
     }
     // request-failed (5xx / network / timeout): not healthy → waking, keep polling.
     if (episodeStartAt === null) episodeStartAt = Date.now();
     consecutiveFailures += 1;
+    ensureElapsedTicker();
     setSnapshot({ status: "waking", wasCold: true, reason, lastCheckedAt: Date.now() });
     scheduleNext();
   };
@@ -184,13 +214,20 @@ export function createEngine(config: MonitorConfig, random: () => number = Math.
     if (destroyed || inFlight) return;
     if (cfg.pauseWhenHidden && isDocumentHidden()) return; // resume on visibilitychange
     inFlight = true;
-    attemptController = new AbortController();
+    try {
+      attemptController = new AbortController();
+    } catch {
+      // Degraded environment without a working AbortController: run the
+      // attempt without a caller-abort channel rather than wedging the loop.
+      attemptController = null;
+    }
     const started = Date.now();
 
     if (isBrowserOffline()) {
       inFlight = false;
       clearAttemptTimers();
       stopActiveTimer();
+      stopElapsedTicker();
       setSnapshot({
         status: "offline",
         reason: "request-failed",
@@ -202,10 +239,19 @@ export function createEngine(config: MonitorConfig, random: () => number = Math.
 
     revealTimer = setTimeout(() => {
       if (episodeStartAt === null) episodeStartAt = Date.now();
+      ensureElapsedTicker();
       setSnapshot({ status: "waking", wasCold: true, reason: "slow-response" });
     }, cfg.revealDelay);
 
-    const outcome = await runCheck();
+    let outcome: CheckOutcome;
+    try {
+      outcome = await runCheck();
+    } catch {
+      // Settle-safety: a check must never reject out of the engine. Any throw
+      // is a failed attempt, not a dead loop (`inFlight` would otherwise stick
+      // and every later attempt/refresh would silently no-op).
+      outcome = { ok: false, reason: "request-failed" };
+    }
     const latency = Date.now() - started;
     if (revealTimer) clearTimeout(revealTimer);
     revealTimer = null;
@@ -238,23 +284,19 @@ export function createEngine(config: MonitorConfig, random: () => number = Math.
         clearInterval(activeTimer);
         activeTimer = null;
       }
-      if (elapsedTimer) {
-        clearInterval(elapsedTimer);
-        elapsedTimer = null;
-      }
+      stopElapsedTicker();
       return;
     }
-    // Visible again: resume elapsed ticker if needed, then fresh check or active interval.
+    // Visible again: fresh check or active interval. The elapsed ticker only
+    // runs during waking episodes.
     if (snapshot.status === "waking" || snapshot.status === "checking") {
-      ensureElapsedTicker();
+      if (snapshot.status === "waking") ensureElapsedTicker();
       void attempt();
     } else if (snapshot.status === "active") {
-      ensureElapsedTicker();
       scheduleActiveInterval();
-    } else {
-      // unknown/offline etc — ensure ticker exists for future waking episodes
-      ensureElapsedTicker();
     }
+    // unknown/offline: nothing to resume — offline recovery is refresh()-driven,
+    // or automatic via the window `online` event for browser-offline episodes.
   };
 
   const attachVisibility = () => {
@@ -266,6 +308,25 @@ export function createEngine(config: MonitorConfig, random: () => number = Math.
     document.removeEventListener("visibilitychange", onVisibilityChange);
   };
 
+  // A browser-offline episode ends automatically: when the browser reports
+  // connectivity again, re-check immediately instead of stranding the user on
+  // "you appear to be offline" until a manual Retry. Server-offline stays
+  // manual — the server coming back is not observable via window events.
+  const onOnline = () => {
+    if (destroyed) return;
+    if (snapshot.status === "offline" && snapshot.offlineKind === "browser") {
+      engine.refresh();
+    }
+  };
+  const attachOnline = () => {
+    if (typeof window === "undefined") return;
+    window.addEventListener("online", onOnline);
+  };
+  const detachOnline = () => {
+    if (typeof window === "undefined") return;
+    window.removeEventListener("online", onOnline);
+  };
+
   const engine: Engine = {
     getSnapshot: () => snapshot,
     subscribe(listener) {
@@ -274,8 +335,11 @@ export function createEngine(config: MonitorConfig, random: () => number = Math.
     },
     refresh() {
       if (destroyed || inFlight) return;
+      // Single-flight by design: while an attempt is outstanding, a refresh is
+      // a no-op — the in-flight result will land imminently.
       clearAttemptTimers();
       stopActiveTimer();
+      stopElapsedTicker();
       episodeStartAt = null;
       consecutiveFailures = 0;
       setSnapshot({
@@ -290,15 +354,16 @@ export function createEngine(config: MonitorConfig, random: () => number = Math.
       destroyed = true;
       clearAttemptTimers();
       stopActiveTimer();
-      if (elapsedTimer) clearInterval(elapsedTimer);
+      stopElapsedTicker();
       detachVisibility();
+      detachOnline();
       attemptController?.abort();
       listeners.clear();
     },
   };
 
-  ensureElapsedTicker();
   attachVisibility();
+  attachOnline();
   void attempt();
 
   return engine;

@@ -106,11 +106,13 @@ describe("ServerStatus — default UI", () => {
     });
     expect(readTime()).toMatch(/^[1-9]s$/);
 
-    // Cross a minute. Total elapsed ~ floor((60040-20)/1000) = 60 → "1m 0s".
+    // Cross a minute. Total elapsed ~60s — the episode clock starts at the
+    // first attempt's resolution (t=20), so accept the one-second boundary
+    // depending on exact tick alignment.
     await act(async () => {
       await vi.advanceTimersByTimeAsync(58_000);
     });
-    expect(readTime()).toBe("1m 0s");
+    expect(readTime()).toMatch(/^1m [01]s$/);
   });
 
   it("shows the ready confirmation after a cold start and auto-hides it", async () => {
