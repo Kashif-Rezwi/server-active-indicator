@@ -14,8 +14,9 @@ import { __engineCount } from "../src/core/registry";
  *    the server being down — all collapse to request-failed, none to a
  *    mythical `sleeping` state.
  *  - Browser-offline detection happens at attempt time (the engine checks
- *    `navigator.onLine` before each fetch); the engine does not subscribe
- *    to `online`/`offline` window events.
+ *    `navigator.onLine` before each fetch). The engine subscribes to the
+ *    window `online` event for exactly one thing: automatic recovery from a
+ *    browser-offline episode. It does not subscribe to `offline`.
  *  - 4xx is a fast-path to `offline` (misconfiguration, not a cold start).
  */
 
@@ -41,6 +42,18 @@ function fetchRejecting(ms: number) {
     () =>
       new Promise<Response>((_r, reject) => {
         setTimeout(() => reject(new TypeError("fetch failed")), ms);
+      }),
+  );
+}
+
+/** A fetch stub that resolves only when its `signal` is aborted (drives the per-attempt timeout). */
+function fetchThatOnlyResolvesOnAbort() {
+  return vi.fn(
+    (_url: string, init: { signal?: AbortSignal }) =>
+      new Promise<Response>((_resolve, reject) => {
+        init.signal?.addEventListener("abort", () => {
+          reject(new DOMException("aborted", "AbortError"));
+        });
       }),
   );
 }
@@ -333,6 +346,111 @@ describe("network matrix", () => {
     await vi.advanceTimersByTimeAsync(1_100);
     expect(vi.mocked(fetch).mock.calls.length).toBeGreaterThan(callsBefore);
     expect(m.getSnapshot().status).toBe("active");
+    m.destroy();
+  });
+
+  // ─── Legacy browsers: the engine must settle without modern AbortSignal APIs ───
+
+  it("legacy browser without AbortSignal.any: checks still work and reach active", async () => {
+    // Chrome <116 / Safari <17.4 / Firefox <124 lack AbortSignal.any. The
+    // check must fall back to a manual AbortController + setTimeout pair —
+    // never throw the engine into a permanently stuck in-flight state.
+    const originalAny = AbortSignal.any;
+    // @ts-expect-error — simulating a legacy runtime
+    delete AbortSignal.any;
+    try {
+      vi.stubGlobal("fetch", fetchResolving(50, 200));
+      const m = createMonitor({ healthUrl: testUrl, revealDelay: 10 });
+      await vi.advanceTimersByTimeAsync(100);
+      expect(m.getSnapshot().status).toBe("active");
+      m.destroy();
+    } finally {
+      AbortSignal.any = originalAny;
+    }
+  });
+
+  it("legacy browser without AbortSignal.timeout: the per-attempt timeout still bounds requests", async () => {
+    const originalTimeout = AbortSignal.timeout;
+    // @ts-expect-error — simulating a legacy runtime
+    delete AbortSignal.timeout;
+    try {
+      vi.stubGlobal("fetch", fetchThatOnlyResolvesOnAbort());
+      const m = createMonitor({
+        healthUrl: testUrl,
+        revealDelay: 10,
+        timeout: 500,
+        pollInterval: 1_000,
+        backoffFactor: 1,
+      });
+      await vi.advanceTimersByTimeAsync(600); // manual fallback timer fires at t=500
+      expect(m.getSnapshot().status).toBe("waking");
+      expect(m.getSnapshot().reason).toBe("request-failed");
+      m.destroy();
+    } finally {
+      AbortSignal.timeout = originalTimeout;
+    }
+  });
+
+  it("worst case: no usable AbortController at all — attempts degrade to unsignaled fetches", async () => {
+    // Absurdly degraded environment: even `new AbortController()` throws. The
+    // engine must still settle every attempt (no stuck in-flight, no
+    // unhandled rejection) — here it simply reaches active without a signal.
+    const originalTimeout = AbortSignal.timeout;
+    const originalAny = AbortSignal.any;
+    // @ts-expect-error — simulating the worst-case runtime
+    delete AbortSignal.timeout;
+    // @ts-expect-error — simulating the worst-case runtime
+    delete AbortSignal.any;
+    vi.stubGlobal(
+      "AbortController",
+      class {
+        constructor() {
+          throw new Error("no abort machinery");
+        }
+      },
+    );
+    try {
+      vi.stubGlobal("fetch", fetchResolving(50, 200));
+      const m = createMonitor({ healthUrl: testUrl, revealDelay: 10 });
+      await vi.advanceTimersByTimeAsync(100);
+      expect(m.getSnapshot().status).toBe("active");
+      m.destroy();
+    } finally {
+      AbortSignal.timeout = originalTimeout;
+      AbortSignal.any = originalAny;
+      vi.unstubAllGlobals();
+    }
+  });
+
+  // ─── Browser-offline recovery via the window `online` event ────────────
+
+  it("browser-offline recovers automatically on the window online event", async () => {
+    vi.stubGlobal("fetch", fetchResolving(50, 200));
+    Object.defineProperty(navigator, "onLine", { value: false, configurable: true });
+    const m = createMonitor({ healthUrl: testUrl, revealDelay: 10 });
+    await vi.advanceTimersByTimeAsync(60);
+    expect(m.getSnapshot().status).toBe("offline");
+    expect(m.getSnapshot().offlineKind).toBe("browser");
+
+    // Reconnect: the browser fires `online`; the engine re-checks immediately.
+    Object.defineProperty(navigator, "onLine", { value: true, configurable: true });
+    window.dispatchEvent(new Event("online"));
+    expect(m.getSnapshot().status).toBe("checking");
+    await vi.advanceTimersByTimeAsync(100);
+    expect(m.getSnapshot().status).toBe("active");
+    m.destroy();
+  });
+
+  it("server-offline ignores the online event (recovery stays manual)", async () => {
+    vi.stubGlobal("fetch", fetchResolving(50, 404)); // 4xx → offline(server)
+    const m = createMonitor({ healthUrl: testUrl, revealDelay: 10 });
+    await vi.advanceTimersByTimeAsync(100);
+    expect(m.getSnapshot().status).toBe("offline");
+    expect(m.getSnapshot().offlineKind).toBe("server");
+
+    window.dispatchEvent(new Event("online"));
+    await vi.advanceTimersByTimeAsync(500);
+    expect(m.getSnapshot().status).toBe("offline"); // unchanged: manual Retry only
     m.destroy();
   });
 });

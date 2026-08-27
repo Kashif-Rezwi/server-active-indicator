@@ -12,9 +12,54 @@ interface ResolvedRequestConfig {
   validate?: (res: Response) => boolean;
 }
 
+interface CombinedSignal {
+  signal: AbortSignal | undefined;
+  /** Release the fallback timer/listener. No-op on the native path. */
+  cleanup: () => void;
+}
+
+const noop = (): void => {};
+
+/**
+ * Combines the per-attempt timeout with the caller's abort signal.
+ *
+ * Native path: `AbortSignal.timeout` + `AbortSignal.any`. Fallback path: a
+ * manual `AbortController` + `setTimeout` pair — `AbortSignal.any` only exists
+ * on Chrome 116+ / Safari 17.4+ / Firefox 124+, and the indicator must keep
+ * working on older browsers (pre-2024 iOS Safari is still a meaningful
+ * installed base) instead of throwing the engine into a stuck state.
+ */
+function combineSignals(timeoutMs: number, callerSignal?: AbortSignal): CombinedSignal {
+  if (
+    typeof AbortSignal.timeout === "function" &&
+    (callerSignal === undefined || typeof AbortSignal.any === "function")
+  ) {
+    const timeoutSignal = AbortSignal.timeout(timeoutMs);
+    return {
+      signal: callerSignal ? AbortSignal.any([timeoutSignal, callerSignal]) : timeoutSignal,
+      cleanup: noop,
+    };
+  }
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const onCallerAbort = () => controller.abort();
+  if (callerSignal) {
+    if (callerSignal.aborted) controller.abort();
+    else callerSignal.addEventListener("abort", onCallerAbort, { once: true });
+  }
+  return {
+    signal: controller.signal,
+    cleanup: () => {
+      clearTimeout(timer);
+      callerSignal?.removeEventListener("abort", onCallerAbort);
+    },
+  };
+}
+
 /**
  * Default health-check strategy: a plain GET with `no-store`, success = `res.ok`
- * (or the user's `validate`). Never parses the body.
+ * (or the user's `validate`). Never parses the body — and never rejects: every
+ * failure mode resolves to a `CheckOutcome` so the engine can always settle.
  *
  * Classification follows docs/research/research-report.md §9:
  * - 2xx          → ok
@@ -34,24 +79,32 @@ export async function defaultCheck(
     return { ok: false, reason: "request-failed" };
   }
 
-  // Combine the per-attempt timeout with the caller's abort signal.
-  const timeoutSignal = AbortSignal.timeout(config.timeout);
-  const signal = callerSignal ? AbortSignal.any([timeoutSignal, callerSignal]) : timeoutSignal;
+  // Combine the per-attempt timeout with the caller's abort signal. If even
+  // the AbortController machinery is missing or broken, degrade to an
+  // unsignaled fetch (no per-attempt timeout) rather than fail every attempt.
+  let combined: CombinedSignal;
+  try {
+    combined = combineSignals(config.timeout, callerSignal);
+  } catch {
+    combined = { signal: undefined, cleanup: noop };
+  }
 
   let res: Response;
   try {
     res = await fetch(config.healthUrl, {
       method: "GET",
       cache: "no-store",
-      signal,
+      signal: combined.signal,
       headers: config.headers,
       credentials: config.credentials,
     });
   } catch (err) {
+    combined.cleanup();
     if (callerSignal?.aborted) return ABORTED;
     void err;
     return { ok: false, reason: "request-failed" };
   }
+  combined.cleanup();
 
   const ok = config.validate ? safeValidate(config.validate, res) : res.ok;
   if (ok) return { ok: true, status: res.status };
