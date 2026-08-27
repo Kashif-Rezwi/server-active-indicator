@@ -26,7 +26,7 @@ Safe, automated releases. Every PR is verified the same way a maintainer verifie
 
 ## Approach
 
-Two workflows under `.github/workflows/`. Both use `pnpm/action-setup@v4` + `actions/setup-node@v4` with Node 22 and pnpm 11 (matches the repo's `packageManager` field), cache on `pnpm-lock.yaml`, and `pnpm install --frozen-lockfile` for determinism.
+Two workflows under `.github/workflows/`. Both use `pnpm/action-setup@v4` (no `version` input — reads `packageManager: pnpm@11.24.0` from `package.json` as single source of truth, avoiding `ERR_PNPM_BAD_PM_VERSION`) + `actions/setup-node@v4` with Node 22, cache on `pnpm-lock.yaml`, and `pnpm install --frozen-lockfile` for determinism.
 
 1. **PR workflow — `.github/workflows/ci.yml`**
    - Name: `CI`
@@ -108,9 +108,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 11
+      - uses: pnpm/action-setup@v4 # no version — reads packageManager
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -142,9 +140,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 11
+      - uses: pnpm/action-setup@v4 # no version — reads packageManager
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -186,7 +182,7 @@ No new dependencies. No `NPM_TOKEN` in workflows.
 - **Concurrent pushes to `main`.** `concurrency.group: release-${{ github.ref }}` + `cancel-in-progress: false` serializes releases; the second run queues rather than cancels.
 - **`pnpm verify` is the whole gate.** If any sub-gate fails (lint, typecheck, coverage threshold <90/85, size budget, publint), `ci.yml` fails and (once branch protection is enabled) blocks merge.
 - **Node version drift.** Workflows pin Node 22 (current LTS at spec time) to match local `.nvmrc`/engines `>=18`. Bumping Node is a one-line change in both workflows; no matrix needed now.
-- **`packageManager` field enforcement.** `pnpm/action-setup@v4` respects `packageManager` but we also pin `version: 11` explicitly so CI does not break if the field is ever removed.
+- **`packageManager` field is single source of truth.** `pnpm/action-setup@v4` with no `version` input reads `packageManager: pnpm@11.24.0` — prevents `ERR_PNPM_BAD_PM_VERSION` (mismatch between `version: 11` in workflow and `11.24.0` in `package.json` that caused simultaneous CI+Release failures).
 
 ## Acceptance criteria
 
