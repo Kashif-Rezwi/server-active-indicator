@@ -1,7 +1,6 @@
 # ADR <NN>: <title>
 
-**Status:** proposed | accepted | superseded by ADR-<NN>
-**Date:** <YYYY-MM-DD>
+**Status:** proposed | accepted | superseded by ADR-<NN> **Date:** <YYYY-MM-DD>
 
 ## Context
 
@@ -13,6 +12,4 @@
 
 ## Consequences
 
-**Positive:** <…>
-**Negative / accepted trade-offs:** <…>
-**Revisit if:** <conditions under which this should be reconsidered>
+**Positive:** <…> **Negative / accepted trade-offs:** <…> **Revisit if:** <conditions under which this should be reconsidered>

@@ -1,9 +1,6 @@
 # Roadmap — server-active-indicator
 
-Phased build plan from zero to a published, production-quality open-source package.
-Each phase lists its objective, tasks, outputs, and the validation gate that must pass
-before moving to the next phase. Phase specs live in `docs/specs/`; architectural
-decisions live in `docs/adr/`.
+Phased build plan from zero to a published, production-quality open-source package. Each phase lists its objective, tasks, outputs, and the validation gate that must pass before moving to the next phase. Phase specs live in `docs/specs/`; architectural decisions live in `docs/adr/`.
 
 Legend: ✅ done · 🔶 in progress · ⬜ not started
 
@@ -59,40 +56,31 @@ Legend: ✅ done · 🔶 in progress · ⬜ not started
 ## Phase 6 — Testing hardening — ✅
 
 - **Objective:** confidence to publish.
-- **Tasks:** ✅ full network-condition matrix (timeout, DNS/CORS, 4xx, 5xx incl. 502-on-wake, offline browser, malformed body) split across `tests/check.test.ts` (defaultCheck HTTP contract, 21 tests) and `tests/network-matrix.test.ts` (engine-level, 12 tests); coverage gate wired into `vitest.config.ts` (per-glob `src/core/**`: 90% lines/functions/statements, 85% branches) and into `pnpm verify`; simulated-sleeping-server fixture (`examples/sleeping-server/`, express, ephemeral-port `startServer()`, `POST /reset` to re-arm) plus a real-fetch integration suite (`tests/fixture.integration.test.ts`, 3 tests, `// @vitest-environment node`); `pnpm fixture:sleep-server` script for the Phase 8 demo seed; two targeted coverage tests for `engine.ts` browser-offline race and active-interval pause/resume; two registry coverage tests (idempotent destroy, headers-as-key).
-- **Decisions captured in spec:** `check.test.ts` separate from `network-matrix.test.ts` for fast feedback on the pure-function path; vitest 4 fake timers do not drive `AbortSignal.timeout` to abort `setTimeout`-based stubs, so the per-attempt timeout is fully exercised in `check.test.ts` and the engine-level test asserts the classification outcome instead of the abort firing; `tsconfig.json` `include` extended to `examples/` so the fixture is typed; coverage gate is per-glob scoped to `src/core/**` (no `src/react/` gate — DOM/axe-coupled code is harder to hit ≥90% without inflating the suite with mechanical tests, deferred).
-- **Validation:** ✅ 105 tests pass (was 67, +38); `src/core/` coverage 97.52% lines / 91.66% branches / 100% functions (gate 90/85); `check.ts` 100% across the board; `pnpm verify` exits 0 with the coverage gate enforced; bundle sizes unchanged from Phase 5 (core 2.94 KB gzip ESM, react 6.04 KB gzip ESM); `pnpm fixture:sleep-server` confirmed: first `/health` sleeps, subsequent are instant, `POST /reset` re-arms; no new runtime dependencies (express, tsx, @types/express are devDeps only); public API and state-machine unchanged.
+- **Tasks:** ✅ full network-condition matrix (timeout, DNS/CORS, 4xx, 5xx incl. 502-on-wake, offline browser, malformed body) split across `tests/check.test.ts` (defaultCheck HTTP contract, 21 tests) and `tests/network-matrix.test.ts` (engine-level, 12 tests); coverage gate wired into `vitest.config.ts` (per-glob `src/core/**`: 90% lines/functions/statements, 85% branches) and into `pnpm verify`; two targeted coverage tests for `engine.ts` browser-offline race and active-interval pause/resume; two registry coverage tests (idempotent destroy, headers-as-key).
+- **Decisions captured in spec:** `check.test.ts` separate from `network-matrix.test.ts` for fast feedback on the pure-function path; vitest 4 fake timers do not drive `AbortSignal.timeout` to abort `setTimeout`-based stubs, so the per-attempt timeout is fully exercised in `check.test.ts` and the engine-level test asserts the classification outcome instead of the abort firing; coverage gate is per-glob scoped to `src/core/**` (no `src/react/` gate — DOM/axe-coupled code is harder to hit ≥90% without inflating the suite with mechanical tests, deferred).
+- **Validation:** ✅ 102 tests pass (was 67, +35); `src/core/` coverage 97.52% lines / 91.66% branches / 100% functions (gate 90/85); `check.ts` 100% across the board; `pnpm verify` exits 0 with the coverage gate enforced; bundle sizes unchanged from Phase 5 (core 2.94 KB gzip ESM, react 6.04 KB gzip ESM); public API and state-machine unchanged.
 - **Spec:** `docs/specs/phase-6-testing-hardening.md`
 
 ## Phase 7 — Documentation — ✅
 
 - **Objective:** README good enough for a recruiter to understand the value in minutes.
-- **Tasks:** demo-first README (placeholder GIF slot for Phase 8); 3-line quick start (React + vanilla); 5-state "how it works" table; platform guides (Render `healthCheckPath`, Railway 502-on-wake caveat, Fly `min_machines_running = 0` default, Koyeb scale-to-zero); minimal `/health` backend recipes (Express/Fastify/NestJS) with CORS guidance; headless usage incl. custom `check` + `key` caveat and CDN/IIFE; full API reference (`Monitor` handle, all 15 `MonitorConfig` options, `MonitorSnapshot` fields, React exports); FAQ incl. "can it detect sleeping? (No — and why that's honest)"; troubleshooting (CORS, capture-on-mount, offlineAfter, custom-check sharing, moduleResolution).
+- **Tasks:** demo-first README (hero GIF slot); 3-line quick start (React + vanilla); 5-state "how it works" table; platform guides (Render `healthCheckPath`, Railway 502-on-wake caveat, Fly `min_machines_running = 0` default, Koyeb scale-to-zero); minimal `/health` backend recipes (Express/Fastify/NestJS) with CORS guidance; headless usage incl. custom `check` + `key` caveat and CDN/IIFE; full API reference (`Monitor` handle, all 15 `MonitorConfig` options, `MonitorSnapshot` fields, React exports); FAQ incl. "can it detect sleeping? (No — and why that's honest)"; troubleshooting (CORS, capture-on-mount, offlineAfter, custom-check sharing, moduleResolution).
 - **Validation:** ✅ every documented option/prop/method cross-checked against `src/` exports and `DEFAULT_CONFIG`; copy reviewed against honesty constraint (no `sleeping` state claims; UI copy says "starting up"); stale Phase 0 status table removed; `pnpm verify` green.
 - **Spec:** `docs/specs/phase-7-documentation.md`
 - **Depends on:** Phase 5 (documents real API).
-
-## Phase 8 — Demo application — ✅
-
-- **Objective:** live proof of the real cold-start experience.
-- **Tasks:** ✅ deployable demo API (`examples/demo-server/` — Express, real CORS incl. preflight, `GET /health` + `GET /api/message` sharing the cold start, `POST /reset` re-arm, `ALLOWED_ORIGIN`/`SLEEP_MS`/`PORT` env, `render.yaml` blueprint with `healthCheckPath: /health`, deploy README); ✅ Vite + React demo frontend (`examples/demo/` — `ServerStatusProvider` + banner, pill variant, app-level data-fetch card showing cold-start latency, "simulate idle timeout" re-arm button, `VITE_API_URL` env); ✅ demo READMEs (local run, Render + static-host deploy steps, GIF recording guide).
-- **Decisions captured in spec:** demo is **not** a pnpm workspace package (locked decision 1) — `examples/demo/pnpm-workspace.yaml` (package-less, with `allowBuilds` for esbuild) makes it its own pnpm project root; local dev dogfoods the library via vite `resolve.alias` + tsconfig `paths` to `../../src` (published-package swap documented for post-Phase 11); new `demo-server/` rather than extending the Phase 6 test fixture (CORS + demo routes stay out of the integration-test surface); `SLEEP_MS` default 20s for demo pacing (Render's real ~60s cold start adds on top).
-- **Validation:** ✅ demo-server curl matrix (3s cold → instant → CORS + preflight 204 → `POST /reset` → 3s again); demo app `pnpm install` / `typecheck` / `build` green (bundle 68.85 KB gzip with source-aliased library); root `pnpm verify` green, `src/` and test gates untouched. **Remaining (external, maintainer):** deploy API to Render → deploy frontend to static host → record GIF → swap `docs/assets/demo-placeholder.gif` → `demo.gif` + live link in README (checklist in `examples/demo/README.md`).
-- **Spec:** `docs/specs/phase-8-demo-application.md`
-- **Depends on:** Phases 5, 7.
 
 ## Phase 9 — Packaging — ✅
 
 - **Objective:** publishable artifact.
 - **Tasks:** ✅ changesets initialized (`@changesets/cli` 3.x, `access: "public"`, `baseBranch: "main"`, non-interactive config written directly — v3 `init` prompts); ✅ exports audit — per-format `types` conditions (`import` → `.d.ts`, `require` → `.d.cts`) for both subpaths so CJS consumers under `nodenext` no longer resolve ESM types; `sideEffects: false` confirmed safe (style injection is effect-time, not module-evaluation); ✅ bundle-size budget gate (`scripts/check-size.mjs`, zero-dep node zlib; budgets: core ≤3.5 KB, react ≤7 KB, IIFE ≤3 KB gzip — the roadmap's "<5 KB total" target predates the Phase 5 UI; per-export budgets documented in the spec); ✅ `publint` gate (`pnpm lint:pkg`); both gates wired into `pnpm verify` after `build`.
-- **Validation:** ✅ `publint` clean ("All good!"); `pnpm size` passes (core 2.86 KB, react 5.90 KB, IIFE 2.23 KB gzip); `pnpm pack` tarball inspected — exactly `dist/**` + `package.json` + `README.md` + `LICENSE`, IIFE filename matches `unpkg`/`jsdelivr` fields, no examples/docs/tests leakage; `pnpm verify` green with the new gates; AGENTS.md commands table synced.
+- **Validation:** ✅ `publint` clean ("All good!"); `pnpm size` passes (core 2.86 KB, react 5.90 KB, IIFE 2.23 KB gzip); `pnpm pack` tarball inspected — exactly `dist/**` + `package.json` + `README.md` + `LICENSE`, IIFE filename matches `unpkg`/`jsdelivr` fields, no docs/tests leakage; `pnpm verify` green with the new gates; AGENTS.md commands table synced.
 - **Spec:** `docs/specs/phase-9-packaging.md`
 - **Depends on:** Phase 6.
 
 ## Phase 10 — CI/CD — ✅
 
 - **Objective:** safe, automated releases.
-- **Tasks:** ✅ PR workflow (`.github/workflows/ci.yml` — `pull_request`→`main` + `push`→`main`, `contents: read`, concurrency cancel, pnpm 11 + Node 22, `pnpm install --frozen-lockfile` → `pnpm verify`); ✅ release workflow (`.github/workflows/release.yml` — `push`→`main` only, `contents: write` + `pull-requests: write` + `id-token: write`, `changesets/action@v1` with `version: pnpm changeset version` / `publish: pnpm publish --provenance`, `registry-url` for OIDC, no `NPM_TOKEN`); ✅ `publishConfig.provenance: true` (defense-in-depth; workflow also passes `--provenance`).
+- **Tasks:** ✅ PR workflow (`.github/workflows/ci.yml` — `pull_request`→`main` + `push`→`main, changeset-release/**`, `contents: read`, concurrency cancel, pnpm 11 + Node 24, `pnpm install --frozen-lockfile` → `pnpm verify`); ✅ release workflow (`.github/workflows/release.yml` — `push`→`main` only, `contents: write` + `pull-requests: write` + `id-token: write`, `changesets/action@v1` with `version: pnpm changeset version` / `publish: pnpm publish --provenance`, `registry-url` for OIDC, no `NPM_TOKEN`); ✅ `publishConfig.provenance: true` (defense-in-depth; workflow also passes `--provenance`).
 - **Validation:** ✅ `pnpm verify` green (format→lint→typecheck→test:coverage 96% lines / 93% branches (gate 90/85 on `src/core/**`) →build→size (core 2.86 KB / react 5.90 KB / IIFE 2.23 KB gzip) →lint:pkg All good!); `pnpm pack` still `dist/**` + `package.json` + `README.md` + `LICENSE`; workflows are pinned majors (`checkout@v4`, `pnpm/action-setup@v4`, `setup-node@v4`, `changesets/action@v1`) and pass structural checks (PR triggers, least-privilege permissions, frozen lockfile, OIDC fields). Manual follow-ups remain: enable npm trusted publishing on npmjs.org for `release.yml`, and require `CI / verify` in branch protection.
 - **Spec:** `docs/specs/phase-10-cicd.md`
 - **Depends on:** Phase 9.
@@ -100,12 +88,13 @@ Legend: ✅ done · 🔶 in progress · ⬜ not started
 ## Phase 11 — Publish — ✅
 
 - **Objective:** `server-active-indicator` live on npm.
-- **Tasks:** ✅ `0.1.0` published to npm (`https://www.npmjs.com/package/server-active-indicator`, `082b372` merge `b18712f chore: version packages` → `0.0.0→0.1.0` + `CHANGELOG.md`); `pnpm verify` green; `pnpm pack` `dist/**+package.json+README+LICENSE`; `publint All good`; size 2.91/5.95/2.27 KB; `npm view` + `unpkg`/`jsDelivr` IIFE 200 verified (`08:48:29Z`); README pre-release note removed. Published via direct `pnpm publish --access public` with `NPM_CONFIG_PROVENANCE=false` (provider `null` locally — provenance via OIDC from next release; `publishConfig.provenance:true` remains). ⬜ next: configure Trusted Publisher `Kashif-Rezwi/server-active-indicator/release.yml` on `https://www.npmjs.com/package/server-active-indicator/access` for OIDC `npm publish --provenance` (auto on `release.yml` merges) → GitHub Release/tag → dogfood `examples/demo` alias swap. See `docs/specs/phase-11-publish.md`.
+- **Tasks:** ✅ `0.1.0` published to npm (`https://www.npmjs.com/package/server-active-indicator`, `082b372` merge `b18712f chore: version packages` → `0.0.0→0.1.0` + `CHANGELOG.md`); `pnpm verify` green; `pnpm pack` `dist/**+package.json+README+LICENSE`; `publint All good`; size 2.91/5.95/2.27 KB; `npm view` + `unpkg`/`jsDelivr` IIFE 200 verified (`08:48:29Z`); README pre-release note removed. Published via direct `pnpm publish --access public` with `NPM_CONFIG_PROVENANCE=false` (provider `null` locally — provenance via OIDC from next release; `publishConfig.provenance:true` remains). ⬜ next: configure Trusted Publisher `Kashif-Rezwi/server-active-indicator/release.yml` on `https://www.npmjs.com/package/server-active-indicator/access` for OIDC `npm publish --provenance` (auto on `release.yml` merges) → GitHub Release/tag. See `docs/specs/phase-11-publish.md`.
 - **Spec:** `docs/specs/phase-11-publish.md`
 - **Depends on:** Phase 10.
 
-## Phase 12 — Portfolio integration — ⬜
+## Phase 12 — Portfolio integration — ✅
 
 - **Objective:** close the loop.
-- **Tasks:** replace the local "Server Wakeup" implementation in `code-review-agent` with the published package; pin repo; write the "extracted to OSS" story.
+- **Tasks:** ✅ replaced local Server Wakeup with published package, pinned repo, published story.
+- **Validation:** ✅ dogfooded.
 - **Depends on:** Phase 11.

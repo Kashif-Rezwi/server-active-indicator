@@ -1,15 +1,10 @@
 # Spec: Phase 3 — Core state engine hardening (registry, backoff, visibility)
 
-**Status:** implemented
-**Phase:** 3 — Core state engine (docs/ROADMAP.md)
-**Date:** 2026-08-26
+**Status:** implemented **Phase:** 3 — Core state engine (docs/ROADMAP.md) **Date:** 2026-08-26
 
 ## Goal
 
-Turn the Phase 2 single-instance engine into the production core: a **shared
-monitor registry** so N consumers of the same config share one health loop, plus the
-three robustness policies deferred from Phase 2 — retry **backoff with jitter**,
-**pause-when-hidden**, and opt-in **active-interval re-checks** (re-sleep detection).
+Turn the Phase 2 single-instance engine into the production core: a **shared monitor registry** so N consumers of the same config share one health loop, plus the three robustness policies deferred from Phase 2 — retry **backoff with jitter**, **pause-when-hidden**, and opt-in **active-interval re-checks** (re-sleep detection).
 
 ## Non-goals
 
@@ -21,14 +16,11 @@ three robustness policies deferred from Phase 2 — retry **backoff with jitter*
 
 Locked decisions (AGENTS.md, research §10):
 
-- **Shared monitor registry** — N consumers of the same config share one health loop.
-  Locked product decision, not an optimization.
-- `waking` is time-bounded by `offlineAfter` (done in Phase 2); backoff must not weaken
-  that bound — it spaces retries _within_ the episode.
+- **Shared monitor registry** — N consumers of the same config share one health loop. Locked product decision, not an optimization.
+- `waking` is time-bounded by `offlineAfter` (done in Phase 2); backoff must not weaken that bound — it spaces retries _within_ the episode.
 - Zero runtime deps; a module-level singleton registry is dependency-free.
 
-Phase 2 left four explicit stubs: registry dedup, backoff multiplier,
-`activeCheckInterval`, `pauseWhenHidden`. This phase wires all four.
+Phase 2 left four explicit stubs: registry dedup, backoff multiplier, `activeCheckInterval`, `pauseWhenHidden`. This phase wires all four.
 
 ## Design
 
@@ -36,20 +28,10 @@ Phase 2 left four explicit stubs: registry dedup, backoff multiplier,
 
 Module-level `Map<string, EngineEntry>` where `EngineEntry = { engine, refs }`.
 
-- **Key**: stable serialization of the _behavioral_ config — `healthUrl` (or a
-  user-supplied `key` for custom `check`/`validate`), plus the timing/validation options that
-  change behavior. Identical effective config shares; differing `revealDelay`/`timeout`/
-  etc. get separate engines.
-- **Custom `check`/`validate` dedup problem**: functions aren't serializable. For `check` or `validate`, the key
-  is an explicit optional `key?: string` on config; if absent, each `createMonitor`
-  with a custom `check`/`validate` gets its **own** engine (documented — sharing custom checks
-  requires an explicit key; same for `validate`).
-- **Refcounting**: `createMonitor` → `acquire(config)` increments; `destroy()` →
-  `release()` decrements; at 0 the engine is destroyed and removed.
-- `createMonitor` returns a **per-consumer handle** (`Monitor`) proxying
-  `getSnapshot`/`subscribe`/`refresh` to the shared engine but owning its own
-  `destroy()` → release. Subscriptions are per-handle (each handle's listener set is
-  fed by one engine subscription).
+- **Key**: stable serialization of the _behavioral_ config — `healthUrl` (or a user-supplied `key` for custom `check`/`validate`), plus the timing/validation options that change behavior. Identical effective config shares; differing `revealDelay`/`timeout`/ etc. get separate engines.
+- **Custom `check`/`validate` dedup problem**: functions aren't serializable. For `check` or `validate`, the key is an explicit optional `key?: string` on config; if absent, each `createMonitor` with a custom `check`/`validate` gets its **own** engine (documented — sharing custom checks requires an explicit key; same for `validate`).
+- **Refcounting**: `createMonitor` → `acquire(config)` increments; `destroy()` → `release()` decrements; at 0 the engine is destroyed and removed.
+- `createMonitor` returns a **per-consumer handle** (`Monitor`) proxying `getSnapshot`/`subscribe`/`refresh` to the shared engine but owning its own `destroy()` → release. Subscriptions are per-handle (each handle's listener set is fed by one engine subscription).
 
 ### 2. Backoff with jitter (inside the engine)
 
@@ -59,34 +41,22 @@ Phase 2 retried at flat `pollInterval`. Now:
 delay = min(pollInterval * backoffFactor^(consecutiveFailures - 1), backoffCap) * jitter
 ```
 
-- Defaults: `backoffFactor: 1.5`, `backoffCap: 15_000`, jitter = uniform ±20%
-  (`delay * (0.8 + random() * 0.4)`).
-- New optional config: `backoffFactor`, `backoffCap`. Added to `MonitorConfig` +
-  `DEFAULT_CONFIG`. `backoffFactor: 1` reproduces Phase 2 flat polling.
-- `offlineAfter` stays on **episode elapsed wall-clock**, not attempt count — backoff
-  spaces attempts but the 60s bound is unchanged.
-- Jitter is injectable for tests (`random?: () => number` internal seam) to keep the
-  suite deterministic.
+- Defaults: `backoffFactor: 1.5`, `backoffCap: 15_000`, jitter = uniform ±20% (`delay * (0.8 + random() * 0.4)`).
+- New optional config: `backoffFactor`, `backoffCap`. Added to `MonitorConfig` + `DEFAULT_CONFIG`. `backoffFactor: 1` reproduces Phase 2 flat polling.
+- `offlineAfter` stays on **episode elapsed wall-clock**, not attempt count — backoff spaces attempts but the 60s bound is unchanged.
+- Jitter is injectable for tests (`random?: () => number` internal seam) to keep the suite deterministic.
 
 ### 3. Pause when hidden (`pauseWhenHidden`, default true)
 
-- Engine subscribes to `document.visibilitychange` (guarded for SSR/tests where
-  `document` is undefined → no-op).
-- On `hidden`: cancel pending `revealTimer` + `pollTimer`; pause `activeTimer`/`elapsedTimer`; an in-flight attempt may resolve but
-  _scheduling_ is suppressed (no new attempts while hidden, no hidden-tab `checking→waking` promotion). The episode clock is
-  `Date.now()`-derived, so pausing timers doesn't corrupt it.
-- On `visible`: if `waking`/`checking`, resume `elapsedTimer` and immediately `attempt()` (fresh check, not a
-  stale timer); if `active` and `activeCheckInterval > 0`, resume `elapsedTimer` and the interval. Otherwise ensure `elapsedTimer` exists for future episodes.
+- Engine subscribes to `document.visibilitychange` (guarded for SSR/tests where `document` is undefined → no-op).
+- On `hidden`: cancel pending `revealTimer` + `pollTimer`; pause `activeTimer`/`elapsedTimer`; an in-flight attempt may resolve but _scheduling_ is suppressed (no new attempts while hidden, no hidden-tab `checking→waking` promotion). The episode clock is `Date.now()`-derived, so pausing timers doesn't corrupt it.
+- On `visible`: if `waking`/`checking`, resume `elapsedTimer` and immediately `attempt()` (fresh check, not a stale timer); if `active` and `activeCheckInterval > 0`, resume `elapsedTimer` and the interval. Otherwise ensure `elapsedTimer` exists for future episodes.
 - `pauseWhenHidden: false` → no listener attached.
 
 ### 4. Active-interval re-check (`activeCheckInterval`, default 0 = off)
 
-- When `active` and `activeCheckInterval > 0`, re-check every `activeCheckInterval` ms.
-  A failing re-check transitions `active → checking → waking` (re-sleep detected) and
-  the normal waking loop resumes. A passing re-check stays `active` (updates
-  `lastCheckedAt`/`lastLatencyMs`).
-- Re-checks while `active` do **not** reset `wasCold` (recovery-confirmation is
-  per-session-episode).
+- When `active` and `activeCheckInterval > 0`, re-check every `activeCheckInterval` ms. A failing re-check transitions `active → checking → waking` (re-sleep detected) and the normal waking loop resumes. A passing re-check stays `active` (updates `lastCheckedAt`/`lastLatencyMs`).
+- Re-checks while `active` do **not** reset `wasCold` (recovery-confirmation is per-session-episode).
 
 ### Files
 
@@ -126,6 +96,4 @@ tests/monitor.test.ts  → extend: backoff timing, pause/visible, active-interva
 
 ## Validation gate
 
-Vitest suites (registry + extended monitor) green; `pnpm verify` green; coverage on
-`src/core/` reported and trending to the ≥90% gate (enforced hard in Phase 6). Then
-mark roadmap Phase 3 and proceed to Phase 4 (React layer).
+Vitest suites (registry + extended monitor) green; `pnpm verify` green; coverage on `src/core/` reported and trending to the ≥90% gate (enforced hard in Phase 6). Then mark roadmap Phase 3 and proceed to Phase 4 (React layer).

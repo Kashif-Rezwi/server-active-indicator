@@ -1,8 +1,6 @@
 # Spec: <name>
 
-**Status:** draft | approved | implemented | superseded
-**Phase:** <roadmap phase>
-**Date:** <YYYY-MM-DD>
+**Status:** draft | approved | implemented | superseded **Phase:** <roadmap phase> **Date:** <YYYY-MM-DD>
 
 ## Goal
 
@@ -29,8 +27,7 @@
 
 ## Design
 
-<API surfaces, state transitions, file layout, defaults — whatever this spec covers.
-Include code/interface sketches where they pin down ambiguity.>
+<API surfaces, state transitions, file layout, defaults — whatever this spec covers. Include code/interface sketches where they pin down ambiguity.>
 
 ## Edge cases & failure modes
 

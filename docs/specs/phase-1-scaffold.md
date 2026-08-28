@@ -1,46 +1,36 @@
 # Spec: Phase 1 — Architecture & scaffold
 
-**Status:** implemented
-**Phase:** 1 — Architecture & scaffold (docs/ROADMAP.md)
-**Date:** 2026-08-26
+**Status:** implemented **Phase:** 1 — Architecture & scaffold (docs/ROADMAP.md) **Date:** 2026-08-26
 
 ## Goal
 
-Produce a buildable, typecheckable, testable package skeleton with the locked
-toolchain, so every later phase has a working `pnpm verify` loop from day one. No
-product logic ships in this phase — module shells and placeholder types only.
+Produce a buildable, typecheckable, testable package skeleton with the locked toolchain, so every later phase has a working `pnpm verify` loop from day one. No product logic ships in this phase — module shells and placeholder types only.
 
 ## Non-goals
 
 - No state machine, no fetch logic, no React components (Phases 2–5).
 - No changesets, CI/CD, or publish config (Phases 9–10).
-- No examples/ directory yet (Phase 8).
 
 ## Background
 
 Locked decisions from `docs/research/research-report.md` §7, §13 and `AGENTS.md`:
 
-- Single package with subpath exports: `"."` = framework-free core, `"./react"` =
-  React adapter. No monorepo tooling.
-- tsup 8.x builds ESM + CJS + `.d.ts` per entry, plus one IIFE bundle (core only) for
-  unpkg/jsDelivr consumers.
+- Single package with subpath exports: `"."` = framework-free core, `"./react"` = React adapter. No monorepo tooling.
+- tsup 8.x builds ESM + CJS + `.d.ts` per entry, plus one IIFE bundle (core only) for unpkg/jsDelivr consumers.
 - Zero runtime dependencies; `react`/`react-dom` are peer dependencies.
-- Vitest 4 (jsdom) + ESLint 9 flat + Prettier; pnpm 11.
+- Vitest 4 (jsdom) + ESLint 10 flat + Prettier; pnpm 11.
 
 ## Approach
 
-Standard modern library layout, configured to fail loudly on misconfiguration
-(strict TS, `verify` script as single gate). The `exports` map is authored now — even
-though Phase 1 code is empty shells — because export-map mistakes are the most
-expensive library bug to fix post-publish.
+Standard modern library layout, configured to fail loudly on misconfiguration (strict TS, `verify` script as single gate). The `exports` map is authored now — even though Phase 1 code is empty shells — because export-map mistakes are the most expensive library bug to fix post-publish.
 
 ### Alternatives considered
 
-| Option               | Pros                                                            | Cons                                                      | Verdict                           |
-| -------------------- | --------------------------------------------------------------- | --------------------------------------------------------- | --------------------------------- |
-| tsup (multi-entry)   | esbuild-fast, one config, ESM+CJS+DTS+IIFE; actively maintained | d.ts via rollup-plugin-dts can struggle with exotic types | **Chosen** — our types are plain  |
-| tsc + Rollup by hand | full control                                                    | slow, 3 configs to keep in sync                           | Rejected — complexity for no gain |
-| unbuild              | nice defaults                                                   | less flexible IIFE; smaller community for React libs      | Rejected                          |
+| Option | Pros | Cons | Verdict |
+| --- | --- | --- | --- |
+| tsup (multi-entry) | esbuild-fast, one config, ESM+CJS+DTS+IIFE; actively maintained | d.ts via rollup-plugin-dts can struggle with exotic types | **Chosen** — our types are plain |
+| tsc + Rollup by hand | full control | slow, 3 configs to keep in sync | Rejected — complexity for no gain |
+| unbuild | nice defaults | less flexible IIFE; smaller community for React libs | Rejected |
 
 ## Design
 
@@ -67,25 +57,16 @@ tests/smoke.test.ts     → verifies entries import & defaults have locked value
   - `"."` → `dist/index.js` (import) / `dist/index.cjs` (require) / `dist/index.d.ts`
   - `"./react"` → `dist/react/index.js` / `dist/react/index.cjs` / `dist/react/index.d.ts`
 - `files: ["dist"]`, `publishConfig: { access: "public" }`
-- `peerDependencies: react ^17||^18||^19, react-dom ^17||^18||^19` with
-  `peerDependenciesMeta` both `optional: true` (core export must not force React)
-- scripts: `build`, `test`, `test:coverage`, `lint`, `lint:pkg`, `size`, `format`, `format:check`,
-  `typecheck`, `verify` (= format:check && lint && typecheck && test:coverage → build → size → lint:pkg)
+- `peerDependencies: react ^17||^18||^19, react-dom ^17||^18||^19` with `peerDependenciesMeta` both `optional: true` (core export must not force React)
+- scripts: `build`, `test`, `test:coverage`, `lint`, `lint:pkg`, `size`, `format`, `format:check`, `typecheck`, `verify` (= format:check && lint && typecheck && test:coverage → build → size → lint:pkg)
 
 ### TypeScript
 
-`tsconfig.json`: strict, `moduleResolution: "bundler"`, `module: "ESNext"`,
-`target: "ES2020"`, `lib: ["ES2020", "DOM", "DOM.Iterable"]`, `jsx: "react-jsx"`,
-`isolatedModules`, `verbatimModuleSyntax`, `noUncheckedIndexedAccess`,
-`skipLibCheck: true`, `noEmit: true`. `tsconfig.build.json` extends it with
-`noEmit: false`, `declaration`, excluding tests.
+`tsconfig.json`: strict, `moduleResolution: "bundler"`, `module: "ESNext"`, `target: "ES2020"`, `lib: ["ES2020", "DOM", "DOM.Iterable"]`, `jsx: "react-jsx"`, `isolatedModules`, `verbatimModuleSyntax`, `noUncheckedIndexedAccess`, `skipLibCheck: true`, `noEmit: true`. `tsconfig.build.json` extends it with `noEmit: false`, `declaration`, excluding tests.
 
 ### tsup
 
-Entries `src/index.ts` + `src/react/index.ts`: formats `esm`+`cjs`, `dts: true`,
-`sourcemap: true`, `clean: true`, `external: ["react", "react-dom"]`.
-Second config for `src/index.ts` → `format: ["iife"]`, `globalName: "ServerActiveIndicator"`,
-`minify: true`, out file `dist/server-active-indicator.iife.js`.
+Entries `src/index.ts` + `src/react/index.ts`: formats `esm`+`cjs`, `dts: true`, `sourcemap: true`, `clean: true`, `external: ["react", "react-dom"]`. Second config for `src/index.ts` → `format: ["iife"]`, `globalName: "ServerActiveIndicator"`, `minify: true`, out file `dist/server-active-indicator.iife.global.js`.
 
 ### Placeholder types (shape only — implementation is Phase 2–3)
 
@@ -122,12 +103,9 @@ export interface MonitorSnapshot {
 
 ## Edge cases & failure modes
 
-- **React-less consumers**: `peerDependenciesMeta.optional` + `external` in tsup —
-  `import "server-active-indicator"` must never resolve react.
-- **Bundler interop**: both `import` and `require` paths must resolve; verified by
-  smoke-importing built `dist/` output in the test phase of `verify`.
-- **IIFE global**: core only; react layer never ships IIFE (needs a React global —
-  out of scope).
+- **React-less consumers**: `peerDependenciesMeta.optional` + `external` in tsup — `import "server-active-indicator"` must never resolve react.
+- **Bundler interop**: both `import` and `require` paths must resolve; verified by smoke-importing built `dist/` output in the test phase of `verify`.
+- **IIFE global**: core only; react layer never ships IIFE (needs a React global — out of scope).
 
 ## Acceptance criteria
 
@@ -141,6 +119,4 @@ export interface MonitorSnapshot {
 
 ## Validation gate
 
-Run `pnpm verify`, inspect `pnpm pack` contents, smoke-import the built output from a
-temp dir with both `node --input-type=module` and `require()`. Demo to maintainer,
-check the Phase 1 box in `docs/ROADMAP.md`, then proceed to Phase 2.
+Run `pnpm verify`, inspect `pnpm pack` contents, smoke-import the built output from a temp dir with both `node --input-type=module` and `require()`. Demo to maintainer, check the Phase 1 box in `docs/ROADMAP.md`, then proceed to Phase 2.

@@ -1,8 +1,6 @@
 # Spec: Phase 11 — Publish
 
-**Status:** implemented — 0.1.0 live on npm 2026-08-27T08:48:29Z
-**Phase:** 11 (Publish)
-**Date:** 2026-08-26
+**Status:** implemented — 0.1.0 live on npm 2026-08-27T08:48:29Z **Phase:** 11 (Publish) **Date:** 2026-08-26
 
 ## Goal
 
@@ -12,7 +10,7 @@
 
 - **No code or API changes.** Phase 11 is release mechanics only; `src/` is frozen from Phase 9 onward. Feature work resumes after `0.1.0` on the way to `1.0.0`.
 - **No manual `npm publish` or manual tag pushes.** All publishing goes through `.github/workflows/release.yml` (changesets action + `pnpm publish --provenance` via OIDC). A maintainer never runs `npm publish` locally.
-- **No demo deployment.** Render/static-host deploy remains a Phase 8 manual checklist item; CI does not deploy examples.
+- **No deployment.** CI does not deploy; release is npm-only.
 - **No automation of branch-protection or npm trusted-publisher configuration.** Both are one-time GitHub/npm UI steps documented here and checked by the release workflow's failure message.
 
 ## Background
@@ -35,7 +33,7 @@ Create one changeset file `.changeset/initial-release.md`:
 "server-active-indicator": minor
 ---
 
-Initial release: framework-agnostic core (5-state machine, shared monitor registry, backoff+jitter, visibility pause, offline detection), React adapter (useServerStatus, ServerStatusProvider, ServerStatus banner/pill with sai- styles), sleeping-server fixture and demo apps, full test matrix with src/core coverage gates, and publishable artifact.
+Initial release: framework-agnostic core (5-state machine, shared monitor registry, backoff+jitter, visibility pause, offline detection), React adapter (useServerStatus, ServerStatusProvider, ServerStatus banner/pill with sai- styles), full test matrix with src/core coverage gates, and publishable artifact.
 ```
 
 At `0.0.0`, a `minor` bump yields `0.1.0` (changesets semver for `0.x`). `patch` would yield `0.0.1`; we want `0.1.0` to signal the first usable release while leaving `1.0.0` for a frozen API. The changeset content is intentionally one entry summarizing Phases 1–10; fine-grained per-phase changes are already git history.
@@ -47,7 +45,7 @@ Alternative patch vs minor considered explicitly in the table below; `1.0.0` now
 Before pushing the changeset:
 
 - `pnpm verify` green (`format:check` → `lint` → `typecheck` → `test:coverage` with `src/core/**` 90/90/90/85 → `build` → `size` (core ≤3.5 KB, react ≤7 KB, IIFE ≤3 KB gzip) → `lint:pkg` (`publint` "All good!")).
-- `pnpm pack --dry-run` (or `pnpm pack` + `tar -tzf`) still shows exactly `dist/**` + `package.json` + `README.md` + `LICENSE`; no `examples/` / `docs/` / `tests/` leakage.
+- `pnpm pack --dry-run` (or `pnpm pack` + `tar -tzf`) still shows exactly `dist/**` + `package.json` + `README.md` + `LICENSE`; no `docs/` / `tests/` leakage.
 - `pnpm changeset status --verbose` shows the package as publishable `minor` (0.0.0 → 0.1.0).
 - Optional dry-run `pnpm changeset version` on a temporary branch or with `git stash` to inspect the generated `CHANGELOG.md` + version bump, then revert (the real bump is done by the action on `main`). This proves the changelog + version arithmetic without polluting `main`.
 
@@ -68,17 +66,17 @@ The actual publish is intentionally not a single local command; it is a short se
 
 ### 5. Dogfooding note
 
-After `0.1.0` is live, `examples/demo` can switch from `vite resolve.alias → ../../src` to the published package (swap documented in Phase 8). That swap is a post-publish follow-up, not part of the publish gate.
+After `0.1.0` is live, consumers can switch from `vite resolve.alias → ../../src` to the published package. That swap is a post-publish follow-up, not part of the publish gate.
 
 ### Alternatives considered
 
-| Option                                                              | Pros                                                                  | Cons                                                                                                         | Verdict                                        |
-| ------------------------------------------------------------------- | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ | ---------------------------------------------- |
-| A. **One `minor` changeset → 0.1.0 (chosen)**                       | Signals first usable release; leaves 1.0.0 for frozen API per roadmap | None                                                                                                         | **Chosen**                                     |
-| B. `patch` → 0.0.1                                                  | Smaller first number                                                  | Misleading; 0.0.1 implies pre-iteration; inconsistent with roadmap's 0.1.0                                   | Rejected                                       |
-| C. Direct `major` → 1.0.0                                           | Immediate stable signal                                               | Premature; roadmap explicitly defers 1.0.0 until API frozen                                                  | Rejected                                       |
-| D. Manual `npm publish` locally                                     | Fast                                                                  | Violates AGENTS.md / development.md; bypasses OIDC + provenance; requires long-lived token                   | Rejected                                       |
-| E. Manual `pnpm changeset version` committed to main without action | Visible bump locally                                                  | Duplicates what the action does; risks diverging from the Version Packages PR flow; bypasses the audit trail | Rejected (used only as dry-run, then reverted) |
+| Option | Pros | Cons | Verdict |
+| --- | --- | --- | --- |
+| A. **One `minor` changeset → 0.1.0 (chosen)** | Signals first usable release; leaves 1.0.0 for frozen API per roadmap | None | **Chosen** |
+| B. `patch` → 0.0.1 | Smaller first number | Misleading; 0.0.1 implies pre-iteration; inconsistent with roadmap's 0.1.0 | Rejected |
+| C. Direct `major` → 1.0.0 | Immediate stable signal | Premature; roadmap explicitly defers 1.0.0 until API frozen | Rejected |
+| D. Manual `npm publish` locally | Fast | Violates AGENTS.md / development.md; bypasses OIDC + provenance; requires long-lived token | Rejected |
+| E. Manual `pnpm changeset version` committed to main without action | Visible bump locally | Duplicates what the action does; risks diverging from the Version Packages PR flow; bypasses the audit trail | Rejected (used only as dry-run, then reverted) |
 
 ## Design
 
@@ -100,7 +98,7 @@ No new scripts, no new deps, no workflow changes (Phase 10 is already correct).
 "server-active-indicator": minor
 ---
 
-Initial release: framework-agnostic core (5-state machine, shared monitor registry, backoff+jitter, visibility pause, offline detection), React adapter (useServerStatus, ServerStatusProvider, ServerStatus banner/pill with sai- styles), sleeping-server fixture and demo apps, full test matrix with src/core coverage gates, and publishable artifact.
+Initial release: framework-agnostic core (5-state machine, shared monitor registry, backoff+jitter, visibility pause, offline detection), React adapter (useServerStatus, ServerStatusProvider, ServerStatus banner/pill with sai- styles), full test matrix with src/core coverage gates, and publishable artifact.
 ```
 
 ### One-time maintainer setup (not in repo, documented for completeness)
