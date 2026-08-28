@@ -4,14 +4,14 @@
 
 **Your frontend loads instantly from a CDN. Your free-tier backend doesn't. Tell the user why.**
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![npm version](https://img.shields.io/npm/v/server-active-indicator.svg)](https://www.npmjs.com/package/server-active-indicator) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/Kashif-Rezwi/server-active-indicator/blob/main/LICENSE)
 
 - **Zero runtime dependencies** — core **~3.3 KB** gzipped, React adapter **~6.4 KB** gzipped.
 - **Framework-agnostic core** + first-class React adapter (`useServerStatus`, `<ServerStatus>`).
 - **Honest by design** — never claims a server state the browser can't actually observe.
 - **Accessible out of the box** — `role="status"`, dark mode, reduced motion, themeable via CSS custom properties.
 
-![Demo: the indicator appears while a cold backend starts up, then confirms and disappears](docs/assets/demo.gif)
+![Demo: the indicator appears while a cold backend starts up, then confirms and disappears](https://raw.githubusercontent.com/Kashif-Rezwi/server-active-indicator/main/docs/assets/demo.gif)
 
 ---
 
@@ -236,7 +236,7 @@ Only reach for `headers` / `credentials` options if your health endpoint genuine
 
 ## Platform guides
 
-Verified behavior per platform (sources: [research report](docs/research/research-report.md)):
+Verified behavior per platform (sources: [research report](https://github.com/Kashif-Rezwi/server-active-indicator/blob/main/docs/research/research-report.md)):
 
 ### Render
 
@@ -359,8 +359,8 @@ pnpm install
 pnpm verify                 # format:check → lint → typecheck → test:coverage (90/85 gate on src/core) → build → size → lint:pkg
 ```
 
-Contributing: see [AGENTS.md](AGENTS.md) (locked decisions & boundaries), [docs/development.md](docs/development.md) (workflow), and [docs/research/](docs/research/) (verified platform behavior behind the defaults).
+Contributing: see [AGENTS.md](https://github.com/Kashif-Rezwi/server-active-indicator/blob/main/AGENTS.md) (locked decisions & boundaries), [docs/development.md](https://github.com/Kashif-Rezwi/server-active-indicator/blob/main/docs/development.md) (workflow), and [docs/research/](https://github.com/Kashif-Rezwi/server-active-indicator/tree/main/docs/research/) (verified platform behavior behind the defaults).
 
 ## License
 
-[MIT](LICENSE)
+[MIT](https://github.com/Kashif-Rezwi/server-active-indicator/blob/main/LICENSE)
