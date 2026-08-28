@@ -11,7 +11,13 @@
 - **Honest by design** — never claims a server state the browser can't actually observe.
 - **Accessible out of the box** — `role="status"`, dark mode, reduced motion, themeable via CSS custom properties.
 
-![Demo: the indicator appears while a cold backend starts up, then confirms and disappears](https://raw.githubusercontent.com/Kashif-Rezwi/server-active-indicator/main/docs/assets/demo.gif)
+<table>
+  <tr>
+    <td>
+      <img alt="Demo: the indicator appears while a cold backend starts up, then confirms and disappears" src="https://raw.githubusercontent.com/Kashif-Rezwi/server-active-indicator/main/docs/assets/demo.gif" />
+    </td>
+  </tr>
+</table>
 
 ---
 
