@@ -33,19 +33,19 @@ jobs:
           cache: pnpm
           registry-url: https://registry.npmjs.org
 
-      - name: Update npm for trusted publishing (requires npm ≥11.5.1)
-        run: npm install -g npm@latest
-
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
       - name: Build
         run: pnpm build
 
+      - name: Test
+        run: pnpm test
+
       - name: Create Release Pull Request or Publish to npm
         uses: changesets/action@v1
         with:
-          version: pnpm changeset version
+          version: pnpm changeset version && pnpm exec prettier --write package.json
           publish: pnpm publish --provenance
           commit: "chore: version packages"
           title: "chore: version packages"
