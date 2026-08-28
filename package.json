@@ -67,6 +67,8 @@
     "lint:pkg": "publint",
     "size": "node scripts/check-size.mjs",
     "changeset": "changeset",
+    "changeset:version": "changeset version && prettier --write package.json",
+    "publish:guarded": "node scripts/publish-if-unpublished.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
