@@ -1,5 +1,11 @@
 # server-active-indicator
 
+## 0.2.2
+
+### Patch Changes
+
+- d76b696: Docs only: frame the demo GIF in a single-cell table so it renders with a visible border on dark-mode dashboards (npm, GitHub). No code changes.
+
 ## 0.2.1
 
 ### Patch Changes
