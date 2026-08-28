@@ -1,5 +1,11 @@
 # server-active-indicator
 
+## 0.2.3
+
+### Patch Changes
+
+- 74bbfa8: Docs only: remove the table frame around the demo GIF in the README.
+
 ## 0.2.2
 
 ### Patch Changes
