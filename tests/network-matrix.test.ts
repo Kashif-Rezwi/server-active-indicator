@@ -4,20 +4,8 @@ import { createMonitor } from "../src/core/monitor";
 import { __engineCount } from "../src/core/registry";
 
 /**
- * Network-condition matrix at the engine level. Sibling to `monitor.test.ts`
- * (which covers the state machine broadly) and `check.test.ts` (which covers
- * the defaultCheck HTTP contract in isolation). This file pins down:
- *
- *  - Locked decision 4: revealDelay (when UI shows) vs timeout (per-attempt
- *    ceiling) are independent. Both must be observable on the same fetch.
- *  - Honesty constraint: a browser cannot distinguish DNS-failure, CORS, and
- *    the server being down — all collapse to request-failed, none to a
- *    mythical `sleeping` state.
- *  - Browser-offline detection happens at attempt time (the engine checks
- *    `navigator.onLine` before each fetch). The engine subscribes to the
- *    window `online` event for exactly one thing: automatic recovery from a
- *    browser-offline episode. It does not subscribe to `offline`.
- *  - 4xx is a fast-path to `offline` (misconfiguration, not a cold start).
+ * Engine-level network-condition matrix (sibling to monitor/check tests): locked
+ * decision 4 independence, honesty constraints, browser-offline, 4xx fast-path.
  */
 
 const URL = "https://api.example.com/health";
@@ -90,9 +78,8 @@ describe("network matrix", () => {
   });
 
   it("locked decision 4: slow response OVER revealDelay → waking(reason=slow-response) → active", async () => {
-    // 4s request, 3s reveal, 10s timeout. The request resolves successfully
-    // (within the per-attempt timeout) but the reveal timer has already
-    // fired, so we passed through `waking` with `reason: "slow-response"`.
+    // 4s request, 3s reveal, 10s timeout: resolves within the timeout, but the
+    // reveal timer already fired → waking with reason slow-response.
     vi.stubGlobal("fetch", fetchResolving(4_000, 200));
     const m = createMonitor({ healthUrl: testUrl, revealDelay: 3_000, timeout: 10_000 });
     await vi.advanceTimersByTimeAsync(3_100);
@@ -104,25 +91,15 @@ describe("network matrix", () => {
   });
 
   it("locked decision 4: per-attempt timeout is honored by the underlying check (verify via the check path)", async () => {
-    // The per-attempt `timeout` itself is fully exercised in `check.test.ts`
-    // (the `defaultCheck` per-attempt timeout case). At the engine level,
-    // we just need to confirm that:
-    //   1. the engine passes `cfg.timeout` through to `defaultCheck` (it does,
-    //      via `runCheck` in engine.ts), and
-    //   2. a `request-failed` outcome from a slow check promotes the
-    //      snapshot to `waking` with `reason: "request-failed"`.
-    // We can't drive `AbortSignal.timeout` under vitest's fake timers
-    // (it dispatches via the host's real timer queue), so we simulate
-    // the outcome by rejecting directly — the engine's classification
-    // is what we care about.
+    // The per-attempt `timeout` is exercised in check.test.ts; fake timers can't
+    // drive AbortSignal.timeout, so simulate the outcome and assert classification.
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new DOMException("aborted", "TimeoutError")));
     const m = createMonitor({ healthUrl: testUrl, revealDelay: 5_000, timeout: 1_000 });
     await vi.advanceTimersByTimeAsync(60);
     const s = m.getSnapshot();
     expect(s.status).toBe("waking");
-    // DOMException with name "TimeoutError" doesn't carry a `reason`, so
-    // `defaultCheck` falls back to `request-failed`. (This is also the
-    // outcome of DNS / CORS / network-failed requests — same bucket.)
+    // TimeoutError carries no `reason` → defaultCheck falls back to
+    // request-failed (same bucket as DNS / CORS / network failures).
     expect(s.reason).toBe("request-failed");
     m.destroy();
   });
@@ -163,10 +140,8 @@ describe("network matrix", () => {
   });
 
   it("honesty: CORS-block and DNS-fail collapse to the same outcome (no `sleeping` state exists)", async () => {
-    // Two independent engines (different URLs). One rejecting with a
-    // CORS-shaped error, one with a DNS-shaped error. They should end up
-    // in the same place at the same time. This is locked decision 2: the
-    // browser cannot tell these apart, and we don't claim it can.
+    // Two engines, one rejecting a CORS-shaped error, one a DNS-shaped error:
+    // both end up in the same place (locked decision 2 — a browser can't tell).
     const urlCors = `${testUrl}-cors`;
     const urlDns = `${testUrl}-dns`;
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("CORS preflight failed")));
@@ -213,11 +188,8 @@ describe("network matrix", () => {
   });
 
   it("browser-offline: navigator flips to offline mid-warm → next attempt sees offline(browser)", async () => {
-    // Start online, let it warm up, then flip the navigator offline.
-    // The engine itself does NOT subscribe to the `offline` event; the
-    // off-path is only observed when the next attempt actually runs.
-    // This test pins down that documented contract: the engine reflects
-    // browser-offline only at attempt time, not in response to the event.
+    // The engine does not subscribe to the `offline` event; browser-offline is
+    // only observed at attempt time — this pins down that documented contract.
     vi.stubGlobal("fetch", fetchResolving(50, 200));
     const m = createMonitor({ healthUrl: testUrl, revealDelay: 10 });
     await vi.advanceTimersByTimeAsync(100);
@@ -267,12 +239,8 @@ describe("network matrix", () => {
   // ─── Coverage pins for engine branch hits ─────────────────────────────
 
   it("coverage: a request-failed result that races with browser-offline → offline(browser)", async () => {
-    // Branch on engine.ts line 171-175: `if (isBrowserOffline())` in
-    // onResult. The fetch *itself* rejects (request-failed) but the OS
-    // has flipped to offline. Result: offline(browser), not waking.
-    // The reveal timer must have fired first (otherwise the engine would
-    // have been `checking` and the next attempt would catch the offline
-    // state at line 191 instead).
+    // Covers the `if (isBrowserOffline())` branch in onResult: the fetch rejects
+    // while the OS has flipped offline → offline(browser), not waking.
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("Failed to fetch")));
     const m = createMonitor({
       healthUrl: testUrl,
@@ -296,10 +264,8 @@ describe("network matrix", () => {
   });
 
   it("coverage: active-interval respects pauseWhenHidden (pauses when tab hidden)", async () => {
-    // Branch on engine.ts: `if (cfg.pauseWhenHidden && isDocumentHidden())`
-    // inside the active-interval setInterval callback. The interval is
-    // scheduled, then we hide the tab, then advance — the active check
-    // must NOT fire while hidden.
+    // Covers the hidden branch of the active-interval callback in engine.ts:
+    // scheduled, then hidden — the active check must NOT fire while hidden.
     vi.stubGlobal("fetch", fetchResolving(50, 200));
     const m = createMonitor({
       healthUrl: testUrl,
@@ -321,8 +287,7 @@ describe("network matrix", () => {
   });
 
   it("coverage: becoming visible again while active resumes the active-interval", async () => {
-    // Branch on engine.ts line 239-240: `else if (snapshot.status === "active")`
-    // inside onVisibilityChange when the tab becomes visible again. The
+    // Covers the visible-again `active` branch of onVisibilityChange: the
     // active-interval must be rescheduled, not left dead.
     vi.stubGlobal("fetch", fetchResolving(50, 200));
     const m = createMonitor({
@@ -352,9 +317,8 @@ describe("network matrix", () => {
   // ─── Legacy browsers: the engine must settle without modern AbortSignal APIs ───
 
   it("legacy browser without AbortSignal.any: checks still work and reach active", async () => {
-    // Chrome <116 / Safari <17.4 / Firefox <124 lack AbortSignal.any. The
-    // check must fall back to a manual AbortController + setTimeout pair —
-    // never throw the engine into a permanently stuck in-flight state.
+    // Chrome <116 / Safari <17.4 / Firefox <124 lack AbortSignal.any; the
+    // fallback must never leave the engine stuck in-flight.
     const originalAny = AbortSignal.any;
     // @ts-expect-error — simulating a legacy runtime
     delete AbortSignal.any;
@@ -392,9 +356,8 @@ describe("network matrix", () => {
   });
 
   it("worst case: no usable AbortController at all — attempts degrade to unsignaled fetches", async () => {
-    // Absurdly degraded environment: even `new AbortController()` throws. The
-    // engine must still settle every attempt (no stuck in-flight, no
-    // unhandled rejection) — here it simply reaches active without a signal.
+    // Degraded environment: even `new AbortController()` throws. The engine
+    // must still settle every attempt — here it reaches active without a signal.
     const originalTimeout = AbortSignal.timeout;
     const originalAny = AbortSignal.any;
     // @ts-expect-error — simulating the worst-case runtime

@@ -39,10 +39,8 @@ function isDocumentHidden(): boolean {
 }
 
 /**
- * Custom checks are bounded by `timeout` like any other attempt: a check that
- * never settles must not wedge the engine in `waking` forever (locked
- * decision 5 — `waking` is time-bounded by `offlineAfter`, which is only
- * enforced after a *completed* attempt).
+ * Custom checks are bounded by `timeout` like any other attempt — a check that
+ * never settles must not wedge the engine in `waking` forever (locked decision 5).
  */
 async function runCustomCheck(
   check: NonNullable<MonitorConfig["check"]>,
@@ -77,9 +75,7 @@ const INITIAL_SNAPSHOT: MonitorSnapshot = {
 };
 
 /**
- * The shared health engine. One instance per unique effective config (see registry).
- * Owns the state machine, timers, backoff, visibility and active-interval policies.
- *
+ * The shared health engine: one instance per unique effective config (see registry).
  * Internal — consumers get a per-handle `Monitor` from `createMonitor`.
  */
 export function createEngine(config: MonitorConfig, random: () => number = Math.random): Engine {
@@ -167,9 +163,14 @@ export function createEngine(config: MonitorConfig, random: () => number = Math.
     pollTimer = setTimeout(() => void attempt(), nextDelay());
   };
 
-  const onResult = (outcome: CheckOutcome, latencyMs: number) => {
+  const onResult = (outcome: CheckOutcome, latencyMs: number, attempts: number) => {
     inFlight = false;
-    if (destroyed || outcome === ABORTED) return;
+    if (destroyed || outcome === ABORTED) {
+      // Aborted attempts never change state, but they did count — emit the
+      // counter alone so attempt bookkeeping stays observable and monotonic.
+      setSnapshot({ attempts });
+      return;
+    }
 
     if (outcome.ok) {
       clearAttemptTimers();
@@ -179,9 +180,11 @@ export function createEngine(config: MonitorConfig, random: () => number = Math.
       setSnapshot({
         status: "active",
         reason: undefined,
+        elapsedSeconds: 0,
         lastCheckedAt: Date.now(),
         lastLatencyMs: latencyMs,
         offlineKind: undefined,
+        attempts,
       });
       scheduleActiveInterval();
       return;
@@ -192,21 +195,33 @@ export function createEngine(config: MonitorConfig, random: () => number = Math.
       clearAttemptTimers();
       stopActiveTimer();
       stopElapsedTicker();
-      setSnapshot({ status: "offline", reason, lastCheckedAt: Date.now(), offlineKind: "server" });
+      setSnapshot({
+        status: "offline",
+        reason,
+        lastCheckedAt: Date.now(),
+        offlineKind: "server",
+        attempts,
+      });
       return;
     }
     if (isBrowserOffline()) {
       clearAttemptTimers();
       stopActiveTimer();
       stopElapsedTicker();
-      setSnapshot({ status: "offline", reason, lastCheckedAt: Date.now(), offlineKind: "browser" });
+      setSnapshot({
+        status: "offline",
+        reason,
+        lastCheckedAt: Date.now(),
+        offlineKind: "browser",
+        attempts,
+      });
       return;
     }
     // request-failed (5xx / network / timeout): not healthy → waking, keep polling.
     if (episodeStartAt === null) episodeStartAt = Date.now();
     consecutiveFailures += 1;
     ensureElapsedTicker();
-    setSnapshot({ status: "waking", wasCold: true, reason, lastCheckedAt: Date.now() });
+    setSnapshot({ status: "waking", wasCold: true, reason, lastCheckedAt: Date.now(), attempts });
     scheduleNext();
   };
 
@@ -247,17 +262,17 @@ export function createEngine(config: MonitorConfig, random: () => number = Math.
     try {
       outcome = await runCheck();
     } catch {
-      // Settle-safety: a check must never reject out of the engine. Any throw
-      // is a failed attempt, not a dead loop (`inFlight` would otherwise stick
-      // and every later attempt/refresh would silently no-op).
+      // Settle-safety: a check must never reject out of the engine — any throw
+      // is a failed attempt, not a dead loop (inFlight would otherwise stick).
       outcome = { ok: false, reason: "request-failed" };
     }
     const latency = Date.now() - started;
     if (revealTimer) clearTimeout(revealTimer);
     revealTimer = null;
 
-    setSnapshot({ attempts: snapshot.attempts + 1 });
-    onResult(outcome, latency);
+    // Single emission per attempt: the counter rides along with the state
+    // change inside onResult (two callbacks → two React renders otherwise).
+    onResult(outcome, latency, snapshot.attempts + 1);
   };
 
   const scheduleActiveInterval = () => {
@@ -273,10 +288,8 @@ export function createEngine(config: MonitorConfig, random: () => number = Math.
   const onVisibilityChange = () => {
     if (destroyed || !cfg.pauseWhenHidden) return;
     if (isDocumentHidden()) {
-      // Cancel pending timers while hidden; in-flight attempt may resolve but
-      // scheduling is suppressed. Clearing revealTimer prevents a hidden-tab
-      // promotion of checking→waking. Pausing active/elapsed intervals saves
-      // wakeups and matches the "no polling while hidden" contract.
+      // Cancel pending timers while hidden: clears the reveal timer (no
+      // hidden-tab checking→waking promotion) and pauses active/elapsed intervals.
       if (revealTimer) clearTimeout(revealTimer);
       if (pollTimer) clearTimeout(pollTimer);
       revealTimer = pollTimer = null;
@@ -308,10 +321,8 @@ export function createEngine(config: MonitorConfig, random: () => number = Math.
     document.removeEventListener("visibilitychange", onVisibilityChange);
   };
 
-  // A browser-offline episode ends automatically: when the browser reports
-  // connectivity again, re-check immediately instead of stranding the user on
-  // "you appear to be offline" until a manual Retry. Server-offline stays
-  // manual — the server coming back is not observable via window events.
+  // A browser-offline episode ends automatically when connectivity returns;
+  // server-offline recovery is not observable via window events → manual.
   const onOnline = () => {
     if (destroyed) return;
     if (snapshot.status === "offline" && snapshot.offlineKind === "browser") {

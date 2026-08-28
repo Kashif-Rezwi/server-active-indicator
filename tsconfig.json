@@ -16,10 +16,5 @@
     "resolveJsonModule": true,
     "noEmit": true
   },
-  "include": ["src", "tests", "examples", "vitest.config.ts", "tsup.config.ts", "eslint.config.js"],
-  "exclude": [
-    // The demo frontend is its own project (own tsconfig + install, aliased
-    // to src/) — typecheck it with `pnpm --dir examples/demo typecheck`.
-    "examples/demo"
-  ]
+  "include": ["src", "tests", "vitest.config.ts", "tsup.config.ts", "eslint.config.js"]
 }

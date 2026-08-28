@@ -1,12 +1,6 @@
 /**
- * Bundle-size budget gate (Phase 9). Zero dependencies — node zlib only.
- *
- * Gzips each published entry point and fails if it exceeds its budget.
- * Budgets are Phase 6 actuals + ~20% headroom (docs/specs/phase-9-packaging.md):
- * the roadmap's original "<5 KB total" target predates the Phase 5 default UI;
- * the enforced budget is per-export.
- *
- * Runs after `build` (needs dist/). Wired into `pnpm verify`.
+ * Bundle-size budget gate (Phase 9): gzips each published entry point and fails over
+ * budget (budgets = Phase 6 actuals + ~20% headroom). Needs `pnpm build`; in `pnpm verify`.
  */
 import { readFileSync } from "node:fs";
 import { gzipSync } from "node:zlib";
@@ -17,7 +11,6 @@ const KB = 1024;
 const ENTRIES = [
   { file: "dist/index.js", label: "core ESM", budgetKb: 3.5 },
   { file: "dist/react/index.js", label: "react ESM", budgetKb: 7 },
-  { file: "dist/server-active-indicator.iife.global.js", label: "core IIFE", budgetKb: 3 },
 ];
 
 let failed = false;

@@ -1,11 +1,6 @@
 /**
- * Core public types for server-active-indicator.
- *
- * Locked decisions (see docs/research/research-report.md §4–§8):
- * - Exactly five user-visible states. There is deliberately no `sleeping` state —
- *   a browser cannot distinguish sleeping from slow or unreachable.
- * - `revealDelay` (when UI appears) and `timeout` (per-attempt ceiling) are
- *   separate concepts. Do not merge them.
+ * Core public types. Five states only — no `sleeping` (undetectable from a browser);
+ * `revealDelay` and `timeout` are deliberately separate (AGENTS.md locked decisions).
  */
 
 /** The five user-visible states of the backend monitor. */
@@ -30,9 +25,8 @@ export interface MonitorConfig {
   healthUrl?: string;
   /** Custom health check; overrides `healthUrl` when provided. */
   check?: () => Promise<boolean | CheckResult>;
-  /** Per-attempt ceiling in ms. Default: 10_000. Bounds every attempt —
-   *  `healthUrl` requests (via an abort signal) and custom `check` calls
-   *  (via a timeout race) alike, so a hung check can never wedge the engine. */
+  /** Per-attempt ceiling in ms (default 10_000). Bounds every attempt —
+   *  `healthUrl` requests and custom `check` calls alike. */
   timeout?: number;
   /** Show `waking` only if a check stays unresolved this long (ms). Default: 3_000. */
   revealDelay?: number;
@@ -41,9 +35,7 @@ export interface MonitorConfig {
   /** Give up on `waking` and declare `offline` after this much elapsed time (ms). Default: 60_000. */
   offlineAfter?: number;
   /** How long the `active` confirmation stays visible (ms). Default: 2_500.
-   *  Presentation-only: the engine never reads it — it is applied by the
-   *  default `<ServerStatus>` UI, so set it on the component's props (not on
-   *  `<ServerStatusProvider>`, where it has no effect). */
+   *  Presentation-only: set it on `<ServerStatus>` props (not the provider). */
   successDisplayMs?: number;
   /** Opt-in periodic re-check while `active` to detect re-sleep (ms). Default: 0 (off). */
   activeCheckInterval?: number;
@@ -55,9 +47,8 @@ export interface MonitorConfig {
   credentials?: RequestCredentials;
   /** Custom response validator, e.g. to reject degraded bodies. Default: `res.ok`. */
   validate?: (res: Response) => boolean;
-  /** Explicit registry key. Required to share an engine across consumers when using a
-   *  custom `check` or custom `validate` (functions aren't serializable). Ignored for
-   *  plain `healthUrl` configs. */
+  /** Explicit registry key. Required to share an engine across consumers when
+   *  using a custom `check`/`validate` (functions aren't serializable). */
   key?: string;
   /** Multiplier applied to the retry delay after each consecutive failure. Default: 1.5.
    *  Set to 1 for flat polling. */

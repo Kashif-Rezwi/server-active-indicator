@@ -106,9 +106,8 @@ describe("ServerStatus — default UI", () => {
     });
     expect(readTime()).toMatch(/^[1-9]s$/);
 
-    // Cross a minute. Total elapsed ~60s — the episode clock starts at the
-    // first attempt's resolution (t=20), so accept the one-second boundary
-    // depending on exact tick alignment.
+    // Cross a minute. The episode clock starts at the first attempt's resolution
+    // (t=20); accept the one-second boundary depending on exact tick alignment.
     await act(async () => {
       await vi.advanceTimersByTimeAsync(58_000);
     });

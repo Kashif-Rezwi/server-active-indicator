@@ -18,9 +18,8 @@ interface EngineEntry {
 const registry = new Map<string, EngineEntry>();
 
 /**
- * Stable key for the *behavioral* config. Consumers with identical effective
- * behavior share one engine. A custom `check` is not serializable, so it shares
- * only when the user supplies an explicit `key`; otherwise it gets a unique engine.
+ * Stable key for the *behavioral* config: identical effective behavior shares one
+ * engine; custom `check`/`validate` share only via an explicit `key`, else unique.
  */
 function registryKey(config: MonitorConfig): string {
   if (config.check) {
@@ -66,8 +65,7 @@ function stableStringify(value: unknown): string {
 
 /**
  * Acquires a per-consumer handle to the shared engine for `config`, creating the
- * engine on first use. The handle's `destroy()` releases the reference; the engine
- * is torn down when its last consumer releases it.
+ * engine on first use; the engine is torn down when the last handle is released.
  */
 export function acquireMonitor(config: MonitorConfig): Monitor {
   const key = registryKey(config);

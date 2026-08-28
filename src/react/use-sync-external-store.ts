@@ -1,17 +1,8 @@
 import * as React from "react";
 
 /**
- * Internal: `useSyncExternalStore` with a React 17 fallback.
- *
- * `useSyncExternalStore` shipped in React 18, but the locked peer range includes
- * `^17` (AGENTS.md). Rather than take a runtime dependency on the official shim
- * package, we use React's implementation when present and fall back to a small
- * legacy subscription pattern otherwise. The fallback is only correct on legacy
- * (non-concurrent) React — which is exactly and only where it runs.
- *
- * `useSyncExternalStore` is accessed through the namespace import: a named import
- * of a missing export can throw at link time under bundler-less ESM interop with
- * CJS React 17, before any fallback could execute.
+ * Internal: `useSyncExternalStore` with a React 17 fallback (locked peer range includes
+ * `^17`); namespace import avoids link-time throws under CJS React 17 interop.
  */
 
 /** The classic `useState` + `useEffect` external-store subscription (React ≤17). */

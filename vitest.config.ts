@@ -1,13 +1,8 @@
 import { defineConfig } from "vitest/config";
 
 /**
- * Coverage gate (Phase 6): ≥90% on `src/core/` is the definition of
- * "confidence to publish" per AGENTS.md. Branches sit at 85% because
- * the remaining gap is `typeof document === "undefined"` SSR defensive
- * branches that we explicitly do NOT want to assert on.
- *
- * `pnpm test` runs without coverage (fast feedback). `pnpm test:coverage`
- * and `pnpm verify` enforce the gate.
+ * Coverage gate (Phase 6): ≥90% on `src/core/` per AGENTS.md — branches at 85% because
+ * the remaining gap is SSR defensive branches we deliberately don't assert on.
  */
 const coreThreshold = {
   // POSIX-ish glob; matched against the relative file path.
@@ -27,10 +22,8 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       include: ["src/**"],
-      // Per-glob thresholds (Vitest 4 supports `thresholds` as a record).
-      // The `src/core/**` gate is the meaningful one; everything else
-      // (`src/react/**`, `src/index.ts`, `src/types.ts`) is excluded by
-      // glob scope rather than by per-file numbers.
+      // Per-glob thresholds (Vitest 4): the `src/core/**` gate is the meaningful
+      // one; `src/react/**` and `src/index.ts` are excluded by glob scope.
       thresholds: coreThreshold,
     },
   },

@@ -11,8 +11,8 @@ function res(status: number, ok = status >= 200 && status < 300) {
 }
 
 /**
- * A fetch stub that resolves only when its `signal` is aborted. Used to
- * exercise the per-attempt timeout path portably across timer backends.
+ * A fetch stub that resolves only when its `signal` is aborted (drives the
+ * per-attempt timeout path portably across timer backends).
  */
 function fetchThatOnlyResolvesOnAbort() {
   return vi.fn(

@@ -1,8 +1,6 @@
 /**
- * server-active-indicator — framework-free core.
- *
- * Subpath export `server-active-indicator` (package.json "."). Zero runtime
- * dependencies; safe to import without React installed.
+ * server-active-indicator — framework-free core (package.json ".").
+ * Zero runtime dependencies; safe to import without React installed.
  */
 
 export { DEFAULT_CONFIG } from "./core/defaults";

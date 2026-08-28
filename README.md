@@ -6,14 +6,12 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-- **Zero runtime dependencies** — core is **2.9 KB** gzipped, React adapter **6 KB** gzipped.
+- **Zero runtime dependencies** — core **~3.3 KB** gzipped, React adapter **~6.4 KB** gzipped.
 - **Framework-agnostic core** + first-class React adapter (`useServerStatus`, `<ServerStatus>`).
 - **Honest by design** — never claims a server state the browser can't actually observe.
 - **Accessible out of the box** — `role="status"`, dark mode, reduced motion, themeable via CSS custom properties.
 
-<!-- TODO(external:phase-8-deploy): replace docs/assets/demo-placeholder.gif with the real demo GIF captured from the live demo app after Render + static-host deploy (Phase 8 external checklist in examples/demo/README.md) -->
-
-![Demo: the indicator appears while a cold backend starts up, then confirms and disappears](docs/assets/demo-placeholder.gif)
+![Demo: the indicator appears while a cold backend starts up, then confirms and disappears](docs/assets/demo.gif)
 
 ---
 
@@ -58,13 +56,13 @@ const unsubscribe = monitor.subscribe((snapshot) => {
 
 The monitor polls your health endpoint and moves through five states:
 
-| State      | Meaning                                                                                       | Default UI renders                |
-| ---------- | --------------------------------------------------------------------------------------------- | --------------------------------- |
-| `unknown`  | No check has completed yet                                                                    | nothing                           |
-| `checking` | A request is in flight                                                                        | nothing until `revealDelay` (3s)  |
-| `waking`   | Responses are slow or failing — the service is likely starting                                | "starting up" banner + timer      |
-| `active`   | The backend responded healthy                                                                 | brief confirmation, then nothing¹ |
-| `offline`  | `offlineAfter` (60s) elapsed without success, an HTTP 4xx, or the browser itself went offline | red banner + Retry button         |
+| State | Meaning | Default UI renders |
+| --- | --- | --- |
+| `unknown` | No check has completed yet | nothing |
+| `checking` | A request is in flight | nothing until `revealDelay` (3s) |
+| `waking` | Responses are slow or failing — the service is likely starting | "starting up" banner + timer |
+| `active` | The backend responded healthy | brief confirmation, then nothing¹ |
+| `offline` | `offlineAfter` (60s) elapsed without success, an HTTP 4xx, or the browser itself went offline | red banner + Retry button |
 
 ¹ After a cold start this instance witnessed. A warm first load stays silent.
 
@@ -199,20 +197,6 @@ const monitor = createMonitor({
 
 Without a `key`, each custom-`check` monitor gets its own engine (functions aren't serializable, so configs can't be deduped automatically).
 
-### Via CDN (no bundler)
-
-```html
-<script src="https://unpkg.com/server-active-indicator/dist/server-active-indicator.iife.global.js"></script>
-<script>
-  const monitor = ServerActiveIndicator.createMonitor({
-    healthUrl: "https://api.example.com/health",
-  });
-  monitor.subscribe((s) => console.log(s.status));
-</script>
-```
-
-(Also available on jsDelivr at the same path.)
-
 ## Backend recipes
 
 The indicator needs one lightweight, unauthenticated `GET` endpoint that returns 2xx quickly. Keep it free of database queries — it must answer even while the rest of the app is still booting.
@@ -281,78 +265,71 @@ The Scale-to-Zero feature (available on the free instance) cold-starts a microVM
 
 ### `createMonitor(config)` → `Monitor`
 
-| Method                | Description                                                                                   |
-| --------------------- | --------------------------------------------------------------------------------------------- |
-| `getSnapshot()`       | Current immutable `MonitorSnapshot`.                                                          |
-| `subscribe(listener)` | Called with the new snapshot on every change. Returns an unsubscribe.                         |
-| `refresh()`           | Trigger an immediate health check. Single-flight: a no-op while a check is already in flight. |
-| `destroy()`           | Release this consumer. The shared engine stops when its last consumer releases it.            |
+| Method | Description |
+| --- | --- |
+| `getSnapshot()` | Current immutable `MonitorSnapshot`. |
+| `subscribe(listener)` | Called with the new snapshot on every change. Returns an unsubscribe. |
+| `refresh()` | Trigger an immediate health check. Single-flight: a no-op while a check is already in flight. |
+| `destroy()` | Release this consumer. The shared engine stops when its last consumer releases it. |
 
 ### `MonitorConfig`
 
-| Option                | Default  | Description                                                                                                                                             |
-| --------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `healthUrl`           | —        | Lightweight health endpoint. Required unless `check` is given.                                                                                          |
-| `check`               | —        | Custom `() => Promise<boolean \| CheckResult>`; overrides `healthUrl`.                                                                                  |
-| `timeout`             | `10000`  | Per-attempt ceiling (ms) — bounds `healthUrl` requests and custom `check` calls alike.                                                                  |
-| `revealDelay`         | `3000`   | Show `waking` only if unresolved this long (ms).                                                                                                        |
-| `pollInterval`        | `5000`   | Base interval between attempts while `waking` (ms).                                                                                                     |
-| `offlineAfter`        | `60000`  | Give up on `waking` → `offline` after this elapsed (ms).                                                                                                |
-| `successDisplayMs`    | `2500`   | Post-cold-start confirmation visibility (ms). Presentation-only: read by `<ServerStatus>`, so set it on the component — a provider does not forward it. |
-| `activeCheckInterval` | `0`      | Opt-in periodic re-check while `active` (re-sleep detection). `0` = off.                                                                                |
-| `pauseWhenHidden`     | `true`   | Pause checks while the tab is hidden; re-check on visible.                                                                                              |
-| `backoffFactor`       | `1.5`    | Retry-delay multiplier per failure. `1` = flat polling.                                                                                                 |
-| `backoffCap`          | `15000`  | Upper bound for the retry delay (ms).                                                                                                                   |
-| `headers`             | none     | Extra request headers (opt-in; none sent by default).                                                                                                   |
-| `credentials`         | omitted  | Fetch credentials mode (opt-in).                                                                                                                        |
-| `validate`            | `res.ok` | Custom response validator, e.g. reject a degraded 200 body.                                                                                             |
-| `key`                 | —        | Explicit registry key; required to share an engine across consumers of a custom `check`.                                                                |
+| Option | Default | Description |
+| --- | --- | --- |
+| `healthUrl` | — | Lightweight health endpoint. Required unless `check` is given. |
+| `check` | — | Custom `() => Promise<boolean \| CheckResult>`; overrides `healthUrl`. |
+| `timeout` | `10000` | Per-attempt ceiling (ms) — bounds `healthUrl` requests and custom `check` calls alike. |
+| `revealDelay` | `3000` | Show `waking` only if unresolved this long (ms). |
+| `pollInterval` | `5000` | Base interval between attempts while `waking` (ms). |
+| `offlineAfter` | `60000` | Give up on `waking` → `offline` after this elapsed (ms). |
+| `successDisplayMs` | `2500` | Post-cold-start confirmation visibility (ms). Presentation-only: read by `<ServerStatus>`, so set it on the component — a provider does not forward it. |
+| `activeCheckInterval` | `0` | Opt-in periodic re-check while `active` (re-sleep detection). `0` = off. |
+| `pauseWhenHidden` | `true` | Pause checks while the tab is hidden; re-check on visible. |
+| `backoffFactor` | `1.5` | Retry-delay multiplier per failure. `1` = flat polling. |
+| `backoffCap` | `15000` | Upper bound for the retry delay (ms). |
+| `headers` | none | Extra request headers (opt-in; none sent by default). |
+| `credentials` | omitted | Fetch credentials mode (opt-in). |
+| `validate` | `res.ok` | Custom response validator, e.g. reject a degraded 200 body. |
+| `key` | — | Explicit registry key; required to share an engine across consumers of a custom `check`. |
 
 ### `MonitorSnapshot`
 
-| Field            | Type                                 | Description                                                                |
-| ---------------- | ------------------------------------ | -------------------------------------------------------------------------- |
-| `status`         | `ServerStatus`                       | `unknown \| checking \| waking \| active \| offline`.                      |
-| `reason`         | `FailureReason?`                     | `slow-response \| request-failed \| http-error` (developer-facing).        |
-| `elapsedSeconds` | `number`                             | Seconds since the current `waking` episode began.                          |
-| `lastCheckedAt`  | `number \| null`                     | Epoch ms of the last completed check.                                      |
-| `attempts`       | `number`                             | Attempts made in the current episode.                                      |
-| `wasCold`        | `boolean`                            | Whether this episode passed through `waking` (drives the confirmation UI). |
-| `lastLatencyMs`  | `number \| null`                     | Latency of the last completed attempt.                                     |
-| `offlineKind`    | `"server" \| "browser" \| undefined` | Distinguishes "backend unreachable" from "your browser is offline".        |
+| Field | Type | Description |
+| --- | --- | --- |
+| `status` | `ServerStatus` | `unknown \| checking \| waking \| active \| offline`. |
+| `reason` | `FailureReason?` | `slow-response \| request-failed \| http-error` (developer-facing). |
+| `elapsedSeconds` | `number` | Seconds since the current `waking` episode began. |
+| `lastCheckedAt` | `number \| null` | Epoch ms of the last completed check. |
+| `attempts` | `number` | Attempts made in the current episode. |
+| `wasCold` | `boolean` | Whether this episode passed through `waking` (drives the confirmation UI). |
+| `lastLatencyMs` | `number \| null` | Latency of the last completed attempt. |
+| `offlineKind` | `"server" \| "browser" \| undefined` | Distinguishes "backend unreachable" from "your browser is offline". |
 
 ### React exports (`server-active-indicator/react`)
 
-| Export                               | Description                                                                                                 |
-| ------------------------------------ | ----------------------------------------------------------------------------------------------------------- |
-| `<ServerStatus {...config} />`       | Default UI. Extra props: `variant` (`"banner" \| "pill"`), `messages`, `className`, render-prop `children`. |
-| `<ServerStatusProvider {...config}>` | Owns one monitor and shares it with all no-arg `useServerStatus()` calls below.                             |
-| `useServerStatus(config?)`           | Returns the snapshot plus `refresh()`. Without args, reads the nearest provider.                            |
+| Export | Description |
+| --- | --- |
+| `<ServerStatus {...config} />` | Default UI. Extra props: `variant` (`"banner" \| "pill"`), `messages`, `className`, render-prop `children`. |
+| `<ServerStatusProvider {...config}>` | Owns one monitor and shares it with all no-arg `useServerStatus()` calls below. |
+| `useServerStatus(config?)` | Returns the snapshot plus `refresh()`. Without args, reads the nearest provider. |
 
 All core types (`MonitorConfig`, `MonitorSnapshot`, `CheckResult`, `FailureReason`) are re-exported from the `react` subpath.
 
 ## FAQ
 
-**Can it detect that the server is sleeping?**
-No — and that's honest. A browser cannot distinguish "server is spun down" from "server is slow" or "network is flaky". So the indicator never claims the server is asleep; it says "starting up", which is true in every one of those cases. You get truthful UX instead of a confident guess.
+**Can it detect that the server is sleeping?** No — and that's honest. A browser cannot distinguish "server is spun down" from "server is slow" or "network is flaky". So the indicator never claims the server is asleep; it says "starting up", which is true in every one of those cases. You get truthful UX instead of a confident guess.
 
-**Why is nothing rendering?**
-Probably because it's working. The indicator renders nothing while checks are fast (`< revealDelay`) and nothing after a warm start. You'll only ever see it during a cold start, a slow backend, or an outage.
+**Why is nothing rendering?** Probably because it's working. The indicator renders nothing while checks are fast (`< revealDelay`) and nothing after a warm start. You'll only ever see it during a cold start, a slow backend, or an outage.
 
-**Does it send cookies or auth headers?**
-No. Requests are plain `GET`s with no credentials. `headers` and `credentials` are explicit opt-ins.
+**Does it send cookies or auth headers?** No. Requests are plain `GET`s with no credentials. `headers` and `credentials` are explicit opt-ins.
 
-**Is it SSR-safe?**
-Yes. Monitors are created in effects (never during render), the stylesheet injects client-side only, and server HTML matches the client's first render — no hydration mismatch.
+**Is it SSR-safe?** Yes. Monitors are created in effects (never during render), the stylesheet injects client-side only, and server HTML matches the client's first render — no hydration mismatch.
 
-**Will ten components polling the same URL hammer my backend?**
-No. Monitors with identical config share one engine via a module-level registry — one health loop, one timer set, regardless of consumer count.
+**Will ten components polling the same URL hammer my backend?** No. Monitors with identical config share one engine via a module-level registry — one health loop, one timer set, regardless of consumer count.
 
-**Does it keep polling forever?**
-While `waking`, attempts back off (1.5×, capped at 15s) and stop at `offlineAfter` (default 60s) → `offline` with a Retry button. While `active`, polling stops entirely unless you opt into `activeCheckInterval` for re-sleep detection. While the tab is hidden, checks pause.
+**Does it keep polling forever?** While `waking`, attempts back off (1.5×, capped at 15s) and stop at `offlineAfter` (default 60s) → `offline` with a Retry button. While `active`, polling stops entirely unless you opt into `activeCheckInterval` for re-sleep detection. While the tab is hidden, checks pause.
 
-**What happens when my laptop goes offline and comes back?**
-The next attempt observes `navigator.onLine === false` and reports `offline` with `offlineKind: "browser"` ("You appear to be offline"). When the browser fires `online`, the monitor re-checks immediately and recovers on its own. Server-side `offline` is different — the monitor can't observe the server coming back without polling, so recovery there is manual (Retry button or `refresh()`).
+**What happens when my laptop goes offline and comes back?** The next attempt observes `navigator.onLine === false` and reports `offline` with `offlineKind: "browser"` ("You appear to be offline"). When the browser fires `online`, the monitor re-checks immediately and recovers on its own. Server-side `offline` is different — the monitor can't observe the server coming back without polling, so recovery there is manual (Retry button or `refresh()`).
 
 ## Troubleshooting
 
@@ -360,38 +337,29 @@ The next attempt observes `navigator.onLine === false` and reports `offline` wit
 
 - Open devtools → Network: is the `/health` request failing CORS? Allow the origin (see [CORS](#cors)).
 - Is the endpoint responding in under `revealDelay` (3s)? Then the wake already finished before the UI threshold — lower `revealDelay` if you want to see it in dev.
-- Test against the bundled fixture: `pnpm fixture:sleep-server` sleeps for real on first hit.
 
-**The banner appears, then vanishes on its own.**
-That's the design: the green confirmation auto-hides after `successDisplayMs` (2.5s). Silence on success.
+**The banner appears, then vanishes on its own.** That's the design: the green confirmation auto-hides after `successDisplayMs` (2.5s). Silence on success.
 
-**It says "offline" but the server came up at 65 seconds.**
-`offlineAfter` defaults to 60s. Raise it (`offlineAfter: 120_000`) if your platform boots slower — or hit the Retry button, which triggers an immediate check. Note that `offline` is terminal: once declared, the monitor stops polling on its own. Only browser-offline (`offlineKind: "browser"`) recovers automatically, via the window `online` event.
+**It says "offline" but the server came up at 65 seconds.** `offlineAfter` defaults to 60s. Raise it (`offlineAfter: 120_000`) if your platform boots slower — or hit the Retry button, which triggers an immediate check. Note that `offline` is terminal: once declared, the monitor stops polling on its own. Only browser-offline (`offlineKind: "browser"`) recovers automatically, via the window `online` event.
 
-**It went straight to "offline" without ever showing "starting up".**
-Your health endpoint answered 4xx (404, 401, …). A 4xx means the server itself is up and responding — the indicator treats it as a configuration problem (wrong URL, missing route, unexpected auth), not a cold start, and fast-paths to `offline` so you notice. Check that `healthUrl` returns 2xx. If your endpoint legitimately answers non-2xx while healthy, provide a custom `validate` (e.g. `validate: (r) => r.status < 500`).
+**It went straight to "offline" without ever showing "starting up".** Your health endpoint answered 4xx (404, 401, …). A 4xx means the server itself is up and responding — the indicator treats it as a configuration problem (wrong URL, missing route, unexpected auth), not a cold start, and fast-paths to `offline` so you notice. Check that `healthUrl` returns 2xx. If your endpoint legitimately answers non-2xx while healthy, provide a custom `validate` (e.g. `validate: (r) => r.status < 500`).
 
-**My custom `check` takes a long time — which option bounds it?**
-`timeout` (default 10s) bounds every attempt, including custom `check` calls: a check that hasn't settled by then counts as `request-failed`, and the episode still converges to `offline` at `offlineAfter`. A hung check can never leave the indicator stuck in "starting up" forever.
+**My custom `check` takes a long time — which option bounds it?** `timeout` (default 10s) bounds every attempt, including custom `check` calls: a check that hasn't settled by then counts as `request-failed`, and the episode still converges to `offline` at `offlineAfter`. A hung check can never leave the indicator stuck in "starting up" forever.
 
-**Changing props/options at runtime does nothing.**
-Config is captured on mount (it keys the shared registry). Remount with a `key`: `<ServerStatus key={url} healthUrl={url} />`.
+**Changing props/options at runtime does nothing.** Config is captured on mount (it keys the shared registry). Remount with a `key`: `<ServerStatus key={url} healthUrl={url} />`.
 
-**Two components with the same custom `check` each run their own loop.**
-Functions aren't serializable, so custom checks can't be deduped automatically. Pass the same explicit `key` to both.
+**Two components with the same custom `check` each run their own loop.** Functions aren't serializable, so custom checks can't be deduped automatically. Pass the same explicit `key` to both.
 
-**TypeScript can't find the module.**
-The package ships `.d.ts` via subpath exports; ensure your `tsconfig` uses `"moduleResolution": "bundler"` (or `"node16"`/`"nodenext"`).
+**TypeScript can't find the module.** The package ships `.d.ts` via subpath exports; ensure your `tsconfig` uses `"moduleResolution": "bundler"` (or `"node16"`/`"nodenext"`).
 
 ## Development
 
 ```bash
 pnpm install
-pnpm verify                 # format → lint → typecheck → tests (coverage gate) → build
-pnpm fixture:sleep-server   # standalone fake-sleeping backend for manual testing
+pnpm verify                 # format:check → lint → typecheck → test:coverage (90/85 gate on src/core) → build → size → lint:pkg
 ```
 
-Contributing: see [AGENTS.md](AGENTS.md) (locked decisions & boundaries), [docs/development.md](docs/development.md) (workflow), [docs/ROADMAP.md](docs/ROADMAP.md) (phased plan), and [docs/research/](docs/research/) (verified platform behavior behind the defaults).
+Contributing: see [AGENTS.md](AGENTS.md) (locked decisions & boundaries), [docs/development.md](docs/development.md) (workflow), and [docs/research/](docs/research/) (verified platform behavior behind the defaults).
 
 ## License
 

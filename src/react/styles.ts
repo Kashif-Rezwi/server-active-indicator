@@ -1,13 +1,6 @@
 /**
- * Self-contained stylesheet for the default `<ServerStatus>` UI (AGENTS.md locked
- * decision 7: injected `sai-`-prefixed CSS + custom properties; no Tailwind, no
- * CSS-in-JS runtime).
- *
- * Themeable via `--sai-*` custom properties (see docs/specs/phase-5-default-ui.md
- * §3). Defaults: light palette, flipped via `prefers-color-scheme: dark`.
- *
- * Injection happens in an effect on first default-UI render — SSR-safe (no DOM on
- * the server) and honest under `"sideEffects": false` (nothing happens at import).
+ * Self-contained stylesheet for the default `<ServerStatus>` UI (AGENTS.md decision 7),
+ * themeable via `--sai-*` custom properties; injected on first default-UI render (SSR-safe).
  */
 
 const STYLE_ELEMENT_ID = "server-active-indicator-styles";
@@ -145,9 +138,8 @@ export const STYLES = `
 `.trim();
 
 /**
- * Injects the default-UI stylesheet once per document. Idempotent across
- * instances, remounts, and StrictMode (guarded by the element id); no-op during
- * SSR (`typeof document === "undefined"`).
+ * Injects the default-UI stylesheet once per document; idempotent across
+ * instances, remounts, and StrictMode; no-op during SSR.
  */
 export function injectServerStatusStyles(): void {
   if (typeof document === "undefined") return;
