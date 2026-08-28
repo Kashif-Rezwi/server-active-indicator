@@ -1,6 +1,6 @@
 # Spec: Phase 7 — Documentation
 
-**Status:** implemented **Phase:** 7 (Documentation) **Date:** 2026-08-26
+**Status:** implemented **Phase:** 7 — Documentation (docs/ROADMAP.md) **Date:** 2026-08-26
 
 ## Goal
 

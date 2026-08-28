@@ -1,6 +1,6 @@
 # Spec: Phase 6 — Testing hardening
 
-**Status:** implemented **Phase:** 6 **Date:** 2026-08-26
+**Status:** implemented **Phase:** 6 — Testing hardening (docs/ROADMAP.md) **Date:** 2026-08-26
 
 ## Goal
 
@@ -108,13 +108,13 @@ coverage: {
 
 ## Acceptance criteria
 
-- [ ] `tests/check.test.ts` covers cases 1–14 above; all green
-- [ ] `tests/network-matrix.test.ts` covers cases 15–24 above; all green
-- [ ] `vitest.config.ts` enforces ≥90% lines/functions/statements and ≥85% branches on `src/core/**`; `pnpm test:coverage` exits 0
-- [ ] `pnpm verify` runs coverage and exits 0; AGENTS.md command table reflects the change
-- [ ] No new runtime dependencies
-- [ ] No public API or state-machine changes
-- [ ] ROADMAP.md Phase 6 marked ✅ with a one-paragraph validation summary and the spec status flipped to `implemented`
+- [x] `tests/check.test.ts` covers cases 1–14 above; all green
+- [x] `tests/network-matrix.test.ts` covers cases 15–24 above; all green
+- [x] `vitest.config.ts` enforces ≥90% lines/functions/statements and ≥85% branches on `src/core/**`; `pnpm test:coverage` exits 0
+- [x] `pnpm verify` runs coverage and exits 0; AGENTS.md command table reflects the change
+- [x] No new runtime dependencies
+- [x] No public API or state-machine changes
+- [x] ROADMAP.md Phase 6 marked ✅ with a one-paragraph validation summary and the spec status flipped to `implemented`
 
 ## Validation gate
 

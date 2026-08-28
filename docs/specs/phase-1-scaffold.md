@@ -62,7 +62,7 @@ tests/smoke.test.ts     → verifies entries import & defaults have locked value
 
 ### TypeScript
 
-`tsconfig.json`: strict, `moduleResolution: "bundler"`, `module: "ESNext"`, `target: "ES2020"`, `lib: ["ES2020", "DOM", "DOM.Iterable"]`, `jsx: "react-jsx"`, `isolatedModules`, `verbatimModuleSyntax`, `noUncheckedIndexedAccess`, `skipLibCheck: true`, `noEmit: true`. `tsconfig.build.json` extends it with `noEmit: false`, `declaration`, excluding tests.
+`tsconfig.json`: strict, `moduleResolution: "bundler"`, `module: "ESNext"`, `target: "ES2020"`, `lib: ["ES2020", "DOM", "DOM.Iterable"]`, `jsx: "react-jsx"`, `isolatedModules`, `verbatimModuleSyntax`, `noUncheckedIndexedAccess`, `skipLibCheck: true`, `noEmit: true`. `tsconfig.build.json` extends it with `noEmit: false`, `declaration`, excluding tests (deleted post-Phase-11 — see `docs/BACKLOG.md`).
 
 ### tsup
 

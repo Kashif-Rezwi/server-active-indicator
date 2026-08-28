@@ -370,7 +370,7 @@ All core types (`MonitorConfig`, `MonitorSnapshot`, `CheckResult`, `FailureReaso
 
 ```bash
 pnpm install
-pnpm verify                 # format → lint → typecheck → tests (coverage gate) → build
+pnpm verify                 # format:check → lint → typecheck → test:coverage (90/85 gate on src/core) → build → size → lint:pkg
 ```
 
 Contributing: see [AGENTS.md](AGENTS.md) (locked decisions & boundaries), [docs/development.md](docs/development.md) (workflow), [docs/ROADMAP.md](docs/ROADMAP.md) (phased plan), and [docs/research/](docs/research/) (verified platform behavior behind the defaults).

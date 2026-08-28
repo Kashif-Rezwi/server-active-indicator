@@ -1,6 +1,6 @@
 # Spec: Phase 9 — Packaging
 
-**Status:** implemented **Phase:** 9 (Packaging) **Date:** 2026-08-26
+**Status:** implemented **Phase:** 9 — Packaging (docs/ROADMAP.md) **Date:** 2026-08-26
 
 ## Goal
 

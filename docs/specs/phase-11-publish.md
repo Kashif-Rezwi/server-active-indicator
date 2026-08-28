@@ -1,6 +1,6 @@
 # Spec: Phase 11 — Publish
 
-**Status:** implemented — 0.1.0 live on npm 2026-08-27T08:48:29Z **Phase:** 11 (Publish) **Date:** 2026-08-26
+**Status:** implemented **Phase:** 11 — Publish (docs/ROADMAP.md) **Date:** 2026-08-26
 
 ## Goal
 

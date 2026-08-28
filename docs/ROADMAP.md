@@ -69,6 +69,10 @@ Legend: ✅ done · 🔶 in progress · ⬜ not started
 - **Spec:** `docs/specs/phase-7-documentation.md`
 - **Depends on:** Phase 5 (documents real API).
 
+## Phase 8 — Demo application — removed
+
+Implemented as a deployable sleeping API + example app, then removed from the repo (the demo GIF in the README remains). The phase number is not reused, keeping spec filenames and git history stable.
+
 ## Phase 9 — Packaging — ✅
 
 - **Objective:** publishable artifact.

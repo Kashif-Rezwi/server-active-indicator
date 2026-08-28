@@ -128,14 +128,14 @@ tests/smoke.test.ts                     → react entry no longer a Phase-4 stub
 
 ## Acceptance criteria
 
-- [ ] `useServerStatus(options)` transitions `unknown → checking → active` on a warm backend and through `waking` on a cold one (renderHook + fake timers)
-- [ ] `refresh()` triggers an immediate re-check and the result reflects it
-- [ ] Unmount leaves zero engines (`__engineCount() === 0`); no snapshot updates after unmount
-- [ ] **StrictMode: exactly one engine after mount, exactly one fetch per poll tick (a leaked loop would double it), zero engines after unmount**
-- [ ] No-arg hook works under a provider and shares its engine; no-arg without provider throws
-- [ ] Legacy shim: subscribes, converges, updates, unsubscribes on unmount
-- [ ] `dist/react/index.js` and `dist/react/index.cjs` begin with `"use client"`; core output does not
-- [ ] `pnpm verify` green; react-layer coverage reported (gate hardens in Phase 6)
+- [x] `useServerStatus(options)` transitions `unknown → checking → active` on a warm backend and through `waking` on a cold one (renderHook + fake timers)
+- [x] `refresh()` triggers an immediate re-check and the result reflects it
+- [x] Unmount leaves zero engines (`__engineCount() === 0`); no snapshot updates after unmount
+- [x] **StrictMode: exactly one engine after mount, exactly one fetch per poll tick (a leaked loop would double it), zero engines after unmount**
+- [x] No-arg hook works under a provider and shares its engine; no-arg without provider throws
+- [x] Legacy shim: subscribes, converges, updates, unsubscribes on unmount
+- [x] `dist/react/index.js` and `dist/react/index.cjs` begin with `"use client"`; core output does not
+- [x] `pnpm verify` green; react-layer coverage reported (gate hardens in Phase 6)
 
 ## Validation gate
 

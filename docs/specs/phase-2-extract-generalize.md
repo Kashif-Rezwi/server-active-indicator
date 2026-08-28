@@ -100,12 +100,12 @@ Deferred to Phase 3 (documented, not wired): backoff multiplier, registry dedup,
 
 ## Acceptance criteria
 
-- [ ] `createMonitor` runs the loop framework-free with mocked fetch + fake timers
-- [ ] Transition coverage: warm first ping; cold start (fail→…→active); 4xx → offline; offlineAfter bound; manual refresh from offline; destroy mid-flight
-- [ ] `wasCold` true only when the episode passed through `waking`
-- [ ] No app coupling: no imports outside `src/core`, no env vars, URL from config
-- [ ] `pnpm verify` green
-- [ ] Behavior-parity notes vs dossier §12 appended to this spec post-implementation
+- [x] `createMonitor` runs the loop framework-free with mocked fetch + fake timers
+- [x] Transition coverage: warm first ping; cold start (fail→…→active); 4xx → offline; offlineAfter bound; manual refresh from offline; destroy mid-flight
+- [x] `wasCold` true only when the episode passed through `waking`
+- [x] No app coupling: no imports outside `src/core`, no env vars, URL from config
+- [x] `pnpm verify` green
+- [x] Behavior-parity notes vs dossier §12 appended to this spec post-implementation
 
 ## Validation gate
 

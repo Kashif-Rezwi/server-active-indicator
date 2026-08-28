@@ -1,6 +1,6 @@
 # Spec: Phase 10 — CI/CD
 
-**Status:** implemented **Phase:** 10 (CI/CD) **Date:** 2026-08-26
+**Status:** implemented **Phase:** 10 — CI/CD (docs/ROADMAP.md) **Date:** 2026-08-26
 
 ## Goal
 
@@ -184,13 +184,13 @@ No new dependencies. No `NPM_TOKEN` in workflows.
 
 ## Acceptance criteria
 
-- [ ] `docs/specs/phase-10-cicd.md` exists and is marked implemented.
-- [ ] `.github/workflows/ci.yml` runs `pnpm verify` on `pull_request`→`main` and `push`→`main, changeset-release/**`, with `contents: read`, concurrency/cancel, pnpm 11 + Node 24 + frozen lockfile.
-- [ ] `.github/workflows/release.yml` triggers only on `push`→`main`, has `contents: write` + `pull-requests: write` + `id-token: write`, uses `changesets/action@v1` with `version: pnpm changeset version` and `publish: pnpm publish --provenance`, depends on `GITHUB_TOKEN` only (no `NPM_TOKEN`), and sets `registry-url`.
-- [ ] `package.json:publishConfig.provenance` is `true`; `publint` still exits clean and `pnpm pack` still contains only `dist/**` + `package.json` + `README.md` + `LICENSE`.
-- [ ] Workflows are valid YAML and use pinned major action versions (`checkout@v4`, `pnpm/action-setup@v4`, `setup-node@v4`, `changesets/action@v1`).
-- [ ] `pnpm verify` green locally (format → lint → typecheck → test:coverage (≥90/85) → build → size → lint:pkg).
-- [ ] `docs/ROADMAP.md` Phase 10 marked done; `AGENTS.md` unchanged (no new commands).
+- [x] `docs/specs/phase-10-cicd.md` exists and is marked implemented.
+- [x] `.github/workflows/ci.yml` runs `pnpm verify` on `pull_request`→`main` and `push`→`main, changeset-release/**`, with `contents: read`, concurrency/cancel, pnpm 11 + Node 24 + frozen lockfile.
+- [x] `.github/workflows/release.yml` triggers only on `push`→`main`, has `contents: write` + `pull-requests: write` + `id-token: write`, uses `changesets/action@v1` with `version: pnpm changeset version` and `publish: pnpm publish --provenance`, depends on `GITHUB_TOKEN` only (no `NPM_TOKEN`), and sets `registry-url`.
+- [x] `package.json:publishConfig.provenance` is `true`; `publint` still exits clean and `pnpm pack` still contains only `dist/**` + `package.json` + `README.md` + `LICENSE`.
+- [x] Workflows are valid YAML and use pinned major action versions (`checkout@v4`, `pnpm/action-setup@v4`, `setup-node@v4`, `changesets/action@v1`).
+- [x] `pnpm verify` green locally (format → lint → typecheck → test:coverage (≥90/85) → build → size → lint:pkg).
+- [x] `docs/ROADMAP.md` Phase 10 marked done; `AGENTS.md` unchanged (no new commands).
 
 ## Validation gate
 
