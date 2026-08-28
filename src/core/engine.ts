@@ -163,9 +163,14 @@ export function createEngine(config: MonitorConfig, random: () => number = Math.
     pollTimer = setTimeout(() => void attempt(), nextDelay());
   };
 
-  const onResult = (outcome: CheckOutcome, latencyMs: number) => {
+  const onResult = (outcome: CheckOutcome, latencyMs: number, attempts: number) => {
     inFlight = false;
-    if (destroyed || outcome === ABORTED) return;
+    if (destroyed || outcome === ABORTED) {
+      // Aborted attempts never change state, but they did count — emit the
+      // counter alone so attempt bookkeeping stays observable and monotonic.
+      setSnapshot({ attempts });
+      return;
+    }
 
     if (outcome.ok) {
       clearAttemptTimers();
@@ -175,9 +180,11 @@ export function createEngine(config: MonitorConfig, random: () => number = Math.
       setSnapshot({
         status: "active",
         reason: undefined,
+        elapsedSeconds: 0,
         lastCheckedAt: Date.now(),
         lastLatencyMs: latencyMs,
         offlineKind: undefined,
+        attempts,
       });
       scheduleActiveInterval();
       return;
@@ -188,21 +195,33 @@ export function createEngine(config: MonitorConfig, random: () => number = Math.
       clearAttemptTimers();
       stopActiveTimer();
       stopElapsedTicker();
-      setSnapshot({ status: "offline", reason, lastCheckedAt: Date.now(), offlineKind: "server" });
+      setSnapshot({
+        status: "offline",
+        reason,
+        lastCheckedAt: Date.now(),
+        offlineKind: "server",
+        attempts,
+      });
       return;
     }
     if (isBrowserOffline()) {
       clearAttemptTimers();
       stopActiveTimer();
       stopElapsedTicker();
-      setSnapshot({ status: "offline", reason, lastCheckedAt: Date.now(), offlineKind: "browser" });
+      setSnapshot({
+        status: "offline",
+        reason,
+        lastCheckedAt: Date.now(),
+        offlineKind: "browser",
+        attempts,
+      });
       return;
     }
     // request-failed (5xx / network / timeout): not healthy → waking, keep polling.
     if (episodeStartAt === null) episodeStartAt = Date.now();
     consecutiveFailures += 1;
     ensureElapsedTicker();
-    setSnapshot({ status: "waking", wasCold: true, reason, lastCheckedAt: Date.now() });
+    setSnapshot({ status: "waking", wasCold: true, reason, lastCheckedAt: Date.now(), attempts });
     scheduleNext();
   };
 
@@ -251,8 +270,9 @@ export function createEngine(config: MonitorConfig, random: () => number = Math.
     if (revealTimer) clearTimeout(revealTimer);
     revealTimer = null;
 
-    setSnapshot({ attempts: snapshot.attempts + 1 });
-    onResult(outcome, latency);
+    // Single emission per attempt: the counter rides along with the state
+    // change inside onResult (two callbacks → two React renders otherwise).
+    onResult(outcome, latency, snapshot.attempts + 1);
   };
 
   const scheduleActiveInterval = () => {
