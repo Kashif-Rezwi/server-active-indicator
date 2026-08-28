@@ -68,7 +68,6 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "fixture:sleep-server": "node --import tsx examples/sleeping-server/run.ts",
     "lint": "eslint .",
     "lint:pkg": "publint",
     "size": "node scripts/check-size.mjs",
