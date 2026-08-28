@@ -10,10 +10,8 @@ export interface ServerStatusProviderProps extends MonitorConfig {
 }
 
 /**
- * Context payload. A `null` context means *no provider*; `{ monitor: null }` means
- * a provider is present but its monitor hasn't been created yet (first commit / SSR,
- * where effects don't run). Keeping those apart is what lets `useServerStatus()`
- * throw only for genuine misuse.
+ * Context payload. `null` = no provider; `{ monitor: null }` = provider present but
+ * monitor not yet created (first commit / SSR) — keeps `useServerStatus()` honest.
  */
 interface ServerStatusContextValue {
   monitor: Monitor | null;
@@ -22,14 +20,8 @@ interface ServerStatusContextValue {
 export const ServerStatusContext = createContext<ServerStatusContextValue | null>(null);
 
 /**
- * App-level server status config in one place: acquires a single monitor on mount
- * and shares it with every no-argument `useServerStatus()` below it. The monitor
- * is released on unmount; via the core registry, anything using the same
- * behavioral config shares the same engine.
- *
- * Config is captured on first mount — changing props later has no effect. To
- * change config, remount the provider with a `key`:
- * `<ServerStatusProvider key={url} healthUrl={url}>`.
+ * App-level server status config in one place: shares a single monitor with every
+ * no-argument `useServerStatus()` below it. Config is captured on first mount.
  */
 export function ServerStatusProvider({ children, ...config }: ServerStatusProviderProps) {
   const [monitor, setMonitor] = useState<Monitor | null>(null);

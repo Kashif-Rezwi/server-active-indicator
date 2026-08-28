@@ -19,10 +19,8 @@ export default defineConfig([
   {
     ...shared,
     entry: { "react/index": "src/react/index.ts" },
-    // Next.js App Router client-boundary directive. Applied to the React subpath
-    // only — the framework-free core must not carry a client directive. The banner
-    // guarantees the directive is the first statement of both the ESM and CJS
-    // outputs regardless of bundler directive handling.
+    // Next.js App Router client directive, React subpath only — the framework-free
+    // core must not carry it. The banner keeps it the first statement of both outputs.
     banner: { js: '"use client"' },
     clean: false,
   },

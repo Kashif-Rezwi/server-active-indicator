@@ -21,13 +21,8 @@ interface CombinedSignal {
 const noop = (): void => {};
 
 /**
- * Combines the per-attempt timeout with the caller's abort signal.
- *
- * Native path: `AbortSignal.timeout` + `AbortSignal.any`. Fallback path: a
- * manual `AbortController` + `setTimeout` pair — `AbortSignal.any` only exists
- * on Chrome 116+ / Safari 17.4+ / Firefox 124+, and the indicator must keep
- * working on older browsers (pre-2024 iOS Safari is still a meaningful
- * installed base) instead of throwing the engine into a stuck state.
+ * Combines the per-attempt timeout with the caller's abort signal; falls back to
+ * a manual controller + timer where `AbortSignal.any` is unavailable (pre-2024).
  */
 function combineSignals(timeoutMs: number, callerSignal?: AbortSignal): CombinedSignal {
   if (
@@ -57,19 +52,8 @@ function combineSignals(timeoutMs: number, callerSignal?: AbortSignal): Combined
 }
 
 /**
- * Default health-check strategy: a plain GET with `no-store`, success = `res.ok`
- * (or the user's `validate`). Never parses the body — and never rejects: every
- * failure mode resolves to a `CheckOutcome` so the engine can always settle.
- *
- * Classification follows docs/research/research-report.md §9:
- * - 2xx          → ok
- * - 3xx          → request-failed by default (`res.ok` is 200–299). If your
- *                  health endpoint may redirect, provide `validate: r => r.ok || (r.status >= 300 && r.status < 400)` or `r.status < 400`.
- *                  Render's own health probe accepts 2xx/3xx but the default stays strict.
- * - 4xx          → http-error   (won't fix itself by waking → fast-path to offline)
- * - 5xx          → request-failed (incl. Railway's documented 502-on-wake)
- * - throw/CORS/DNS/timeout-abort → request-failed
- * - caller abort → ABORTED (superseded/unmounted; caller decides what to do)
+ * Default health-check strategy: plain GET with `no-store`, success = `res.ok` (or
+ * user `validate`). Never rejects — every failure resolves to a `CheckOutcome` (research §9).
  */
 export async function defaultCheck(
   config: ResolvedRequestConfig,
@@ -79,9 +63,8 @@ export async function defaultCheck(
     return { ok: false, reason: "request-failed" };
   }
 
-  // Combine the per-attempt timeout with the caller's abort signal. If even
-  // the AbortController machinery is missing or broken, degrade to an
-  // unsignaled fetch (no per-attempt timeout) rather than fail every attempt.
+  // If even the AbortController machinery is missing, degrade to an unsignaled
+  // fetch (no per-attempt timeout) rather than fail every attempt.
   let combined: CombinedSignal;
   try {
     combined = combineSignals(config.timeout, callerSignal);

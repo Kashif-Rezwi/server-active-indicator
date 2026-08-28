@@ -487,12 +487,8 @@ describe("phase 3 policies", () => {
   });
 
   it("silence on success: a warm engine leaves no elapsed ticker running", async () => {
-    // Fake timers advance in coarse chunks, so the reveal timer and the fetch
-    // resolution land in the same tick — asserting "ticker was never *created*"
-    // is not expressible here. The behavioral contract that matters: once
-    // warm/active, no 1s ticker is left running (it self-clears on the
-    // transition out of waking). Drive a full waking→active cycle and assert
-    // the ticker is gone afterwards.
+    // Fake timers coarsely merge the reveal timer and fetch resolution, so
+    // "ticker was never created" isn't expressible; drive a waking→active cycle.
     let call = 0;
     vi.stubGlobal(
       "fetch",

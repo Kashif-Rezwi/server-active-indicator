@@ -42,26 +42,8 @@ function formatElapsed(seconds: number): string {
 }
 
 /**
- * Default UI for the server status monitor.
- *
- * - `variant="banner"` (default): full-width strip; `variant="pill"`: compact pill.
- * - Silence on success: nothing renders for `unknown`/`checking` or a warm `active`
- *   (`wasCold=false`). After a `waking` episode the green confirmation shows and
- *   auto-hides after `successDisplayMs`; it re-arms if the server re-sleeps.
- * - `waking`: amber "starting up" copy + live elapsed counter (the counter is
- *   `aria-hidden` — per-second live-region changes would spam screen readers).
- * - `offline`: red banner with a Retry button (`refresh()`); when the browser
- *   itself is offline (`offlineKind`) that gets its own message.
- * - Styling: injected `sai-`-prefixed CSS, themeable via `--sai-*` custom
- *   properties (light/dark via `prefers-color-scheme`); motion honors
- *   `prefers-reduced-motion`; state announced via `role="status"` +
- *   `aria-live="polite"`.
- * - `children` render prop replaces the default UI entirely (no stylesheet is
- *   injected then); it receives the raw snapshot plus `refresh`.
- *
- * A `healthUrl`/`check` prop creates the component's own monitor (config captured
- * on mount, as with `useServerStatus`); without a check source the nearest
- * `<ServerStatusProvider>`'s monitor is used.
+ * Default UI for the monitor: silence on success; amber "starting up" banner with a
+ * live counter while `waking`; red offline banner with Retry. See README for details.
  */
 export function ServerStatus(props: ServerStatusProps): ReactNode {
   const { variant = "banner", messages, className, children, ...config } = props;
@@ -78,11 +60,8 @@ export function ServerStatus(props: ServerStatusProps): ReactNode {
     if (usesDefaultUi) injectServerStatusStyles();
   }, [usesDefaultUi]);
 
-  // Silence-on-success presentation policy (the engine stays truthful — see
-  // docs/specs/phase-2-extract-generalize.md): the confirmation shows only after
-  // a `waking`/`offline` episode this instance has witnessed, then auto-hides
-  // after `successDisplayMs`. A consumer that mounts *into* an already-`active`
-  // monitor has not witnessed any cold start → it stays silent.
+  // Silence-on-success presentation policy: the confirmation shows only after a
+  // waking/offline episode this instance witnessed, then auto-hides.
   const [dismissed, setDismissed] = useState(true);
   const hasSeenWakeOrOfflineRef = useRef(false);
 

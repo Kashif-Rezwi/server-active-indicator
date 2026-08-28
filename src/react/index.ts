@@ -1,9 +1,6 @@
 /**
- * server-active-indicator/react — React adapter.
- *
- * Subpath export `server-active-indicator/react` (package.json "./react").
- * Requires react as a peer dependency. Built with a `'use client'` banner for the
- * Next.js App Router; the framework-free core subpath carries no directive.
+ * server-active-indicator/react — React adapter (package.json "./react"). Built with
+ * a `'use client'` banner for Next.js; the framework-free core subpath carries none.
  */
 
 export { useServerStatus } from "./use-server-status";

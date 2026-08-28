@@ -14,10 +14,8 @@ export interface UseServerStatusResult extends MonitorSnapshot {
 }
 
 /**
- * Snapshot shown while no monitor exists yet: the first commit (the monitor is
- * created in an effect, never during render) and server rendering, where effects
- * never run. `unknown` honestly means "no check has started". Being a module-level
- * constant, server HTML and client hydration render agree — no mismatch.
+ * Snapshot while no monitor exists (first commit / SSR): `unknown` honestly means
+ * "no check has started". Module-level constant → no hydration mismatch.
  */
 const INITIAL_SNAPSHOT: MonitorSnapshot = {
   status: "unknown",
@@ -31,15 +29,8 @@ const INITIAL_SNAPSHOT: MonitorSnapshot = {
 const noop = (): void => {};
 
 /**
- * Headless React binding for the server status monitor.
- *
- * - `useServerStatus(options)` — a monitor over the given config.
- * - `useServerStatus()` — the nearest `<ServerStatusProvider>`'s monitor.
- *
- * The monitor is created in an effect (render stays pure; abandoned concurrent
- * renders can't leak engines) and destroyed on unmount, so StrictMode's
- * mount → cleanup → mount cycle ends with exactly one shared engine. Options are
- * captured on first mount; to change them, remount with a `key`.
+ * Headless React binding: with `options` an own monitor, without the nearest
+ * provider's. Created in an effect, destroyed on unmount; options captured on mount.
  */
 export function useServerStatus(options?: UseServerStatusOptions): UseServerStatusResult {
   const contextValue = useContext(ServerStatusContext);

@@ -1,11 +1,8 @@
 import type { ReactNode } from "react";
 
 /**
- * Decorative inline status icons.
- *
- * Inline SVG per AGENTS.md locked decision 7 (no icon library); every icon is
- * `aria-hidden` (the surrounding live-region text carries the meaning) and sized
- * `1em` so it tracks the configured `--sai-font-size`.
+ * Decorative inline status icons (AGENTS.md locked decision 7 — no icon library):
+ * every icon is `aria-hidden` and sized `1em` to track `--sai-font-size`.
  */
 
 export function SpinnerIcon(): ReactNode {
