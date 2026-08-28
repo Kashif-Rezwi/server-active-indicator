@@ -28,13 +28,14 @@ export function ServerStatusProvider({ children, ...config }: ServerStatusProvid
 
   useEffect(() => {
     // Created in an effect, never during render, so that abandoned concurrent
-    // renders can't leak engines (docs/specs/phase-4-react-layer.md §1–§2).
+    // renders can't leak engines.
     const m = createMonitor(config);
     setMonitor(m);
     return () => {
       m.destroy();
     };
-    // Capture-on-mount is deliberate — see docs/specs/phase-4-react-layer.md §3.
+    // Capture-on-mount is deliberate: `config` keys the shared registry, so live
+    // reconfiguration would tear down and recreate the engine mid-episode instead.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

@@ -10,9 +10,9 @@ Deferred items from the pre-Phase-12 comprehensive audit (2026-08-27). None of t
 
 ## Runtime micro-polish (behavior-preserving)
 
-- **Fold the per-attempt double emission into one.** `attempt()` emits `{ attempts: n+1 }` and then `onResult` emits the state change — two subscriber callbacks (two React renders) per attempt. Merge into a single `setSnapshot` call.
-- **Reset `elapsedSeconds: 0` on transition to `active`.** The stale value currently persists in the snapshot until the next episode.
-- **`engines: { node: ">=18" }`** in package.json is meaningless for a browser library. Keep (harmless) or drop.
+- [x] **Fold the per-attempt double emission into one.** ✅ Done (2026-08-29) — `attempt()` now passes the incremented counter into `onResult`, which merges it into its single state-change `setSnapshot` (the ABORTED path keeps the counter-only emission). One listener callback per attempt instead of two.
+- [x] **Reset `elapsedSeconds: 0` on transition to `active`.** ✅ Done (2026-08-29) — included in the `active` branch's `setSnapshot`.
+- [x] **`engines: { node: ">=18" }`** in package.json is meaningless for a browser library. Keep (harmless) or drop. ✅ Dropped (2026-08-29).
 
 ## Documented-as-deliberate behaviors to revisit only with real-world evidence
 

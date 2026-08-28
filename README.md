@@ -197,20 +197,6 @@ const monitor = createMonitor({
 
 Without a `key`, each custom-`check` monitor gets its own engine (functions aren't serializable, so configs can't be deduped automatically).
 
-### Via CDN (no bundler)
-
-```html
-<script src="https://unpkg.com/server-active-indicator/dist/server-active-indicator.iife.global.js"></script>
-<script>
-  const monitor = ServerActiveIndicator.createMonitor({
-    healthUrl: "https://api.example.com/health",
-  });
-  monitor.subscribe((s) => console.log(s.status));
-</script>
-```
-
-(Also available on jsDelivr at the same path.)
-
 ## Backend recipes
 
 The indicator needs one lightweight, unauthenticated `GET` endpoint that returns 2xx quickly. Keep it free of database queries — it must answer even while the rest of the app is still booting.
@@ -373,7 +359,7 @@ pnpm install
 pnpm verify                 # format:check → lint → typecheck → test:coverage (90/85 gate on src/core) → build → size → lint:pkg
 ```
 
-Contributing: see [AGENTS.md](AGENTS.md) (locked decisions & boundaries), [docs/development.md](docs/development.md) (workflow), [docs/ROADMAP.md](docs/ROADMAP.md) (phased plan), and [docs/research/](docs/research/) (verified platform behavior behind the defaults).
+Contributing: see [AGENTS.md](AGENTS.md) (locked decisions & boundaries), [docs/development.md](docs/development.md) (workflow), and [docs/research/](docs/research/) (verified platform behavior behind the defaults).
 
 ## License
 

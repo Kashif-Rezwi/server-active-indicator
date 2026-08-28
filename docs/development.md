@@ -12,13 +12,13 @@ Use when: ≤3 files touched, no public API / data model / infra change, trivial
 
 ## Full gear — features & architecture
 
-Use when: touching >3 files, public API, the state machine, build/CI infra, or anything not trivially reversible. All roadmap phases (see `docs/ROADMAP.md`) run in full gear.
+Use when: touching >3 files, public API, the state machine, build/CI infra, or anything not trivially reversible.
 
-1. **Spec first.** Copy `docs/specs/_template.md` to `docs/specs/<phase-or-feature>.md` and fill it. If the approach is ambiguous, write down at least two options with a trade-off table and pick one before coding.
-2. **Decisions of record.** Anything that changes a locked decision in `AGENTS.md` needs an ADR (`docs/adr/_template.md`).
-3. **Implement** against the spec. Keep commits small and scoped.
+1. **Design first.** Write the design rationale in the PR description. If the approach is ambiguous, write down at least two options with a trade-off table and pick one before coding.
+2. **Decisions of record.** Anything that changes a locked decision in `AGENTS.md` needs an ADR — add `docs/adr/<slug>.md` (create the directory with the first ADR).
+3. **Implement** against the design. Keep commits small and scoped.
 4. **Verify.** `pnpm verify` green is the definition of done. Coverage gate: ≥90% lines/functions/statements and ≥85% branches on `src/core/**` (enforced in `vitest.config.ts`).
-5. **Close the loop.** Update the checkbox in `docs/ROADMAP.md`, the spec status, and any docs affected. Request review at the phase gate before starting the next phase.
+5. **Close the loop.** Update any docs affected by the change. Request review before merging.
 
 ## Definition of done
 

@@ -26,7 +26,7 @@ The Phase 0 research is authoritative: `docs/research/research-report.md` and `d
 
 - **Language:** TypeScript (strict mode)
 - **Package manager:** pnpm (11.x)
-- **Build:** tsup 8.x → ESM + CJS + `.d.ts` + IIFE (for unpkg/jsDelivr)
+- **Build:** tsup 8.x → ESM + CJS + `.d.ts`
 - **Test:** Vitest 4 + React Testing Library + axe-core; fake timers for the state machine; jsdom for component tests.
 - **Lint/format:** ESLint 10 (flat config) + Prettier
 - **Versioning/releases:** changesets 3 + GitHub Actions with npm OIDC trusted publishing (no long-lived npm tokens)
@@ -57,7 +57,7 @@ Available once Phase 1 scaffolding lands (keep this table in sync with `package.
 Two gears, defined in `docs/development.md`:
 
 - **Quick gear** (≤3 files, no public API/infra change, trivially reversible): change → `pnpm verify` → commit.
-- **Full gear** (features, public API, state machine, infra): spec in `docs/specs/` first → implement → `pnpm verify` → update docs/roadmap → commit. Phase plans live in `docs/ROADMAP.md`; work one phase at a time.
+- **Full gear** (features, public API, state machine, infra): write the design rationale in the PR description (with options + a trade-off table when the approach is ambiguous) → implement → `pnpm verify` → update docs → commit.
 
 ## Boundaries for agents
 
@@ -74,5 +74,5 @@ Two gears, defined in `docs/development.md`:
 src/core/          framework-free engine (monitor registry, machine, fetch strategy)
 src/react/         React adapter (hook, provider, default UI, injected styles)
 tests/             Vitest suites
-docs/              ROADMAP.md, research/, specs/, adr/, development.md
+docs/              research/, BACKLOG.md, development.md
 ```

@@ -50,7 +50,8 @@ export function useServerStatus(options?: UseServerStatusOptions): UseServerStat
     return () => {
       monitor.destroy();
     };
-    // Capture-on-mount is deliberate — see docs/specs/phase-4-react-layer.md §3.
+    // Capture-on-mount is deliberate: `options` keys the shared registry, so live
+    // reconfiguration would tear down and recreate the engine mid-episode instead.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
