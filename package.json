@@ -50,17 +50,12 @@
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "unpkg": "./dist/server-active-indicator.iife.global.js",
-  "jsdelivr": "./dist/server-active-indicator.iife.global.js",
   "files": [
     "dist"
   ],
   "publishConfig": {
     "access": "public",
     "provenance": true
-  },
-  "engines": {
-    "node": ">=18"
   },
   "scripts": {
     "build": "tsup",

@@ -11,7 +11,6 @@ const KB = 1024;
 const ENTRIES = [
   { file: "dist/index.js", label: "core ESM", budgetKb: 3.5 },
   { file: "dist/react/index.js", label: "react ESM", budgetKb: 7 },
-  { file: "dist/server-active-indicator.iife.global.js", label: "core IIFE", budgetKb: 3 },
 ];
 
 let failed = false;

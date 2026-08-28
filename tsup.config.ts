@@ -24,12 +24,4 @@ export default defineConfig([
     banner: { js: '"use client"' },
     clean: false,
   },
-  {
-    entry: { "server-active-indicator.iife": "src/index.ts" },
-    format: ["iife"],
-    globalName: "ServerActiveIndicator",
-    minify: true,
-    sourcemap: true,
-    clean: false,
-  },
 ]);
