@@ -29,7 +29,7 @@ export default defineConfig({
       include: ["src/**"],
       // Per-glob thresholds (Vitest 4 supports `thresholds` as a record).
       // The `src/core/**` gate is the meaningful one; everything else
-      // (`src/react/**`, `src/index.ts`, `src/types.ts`) is excluded by
+      // (`src/react/**`, `src/index.ts`) is excluded by
       // glob scope rather than by per-file numbers.
       thresholds: coreThreshold,
     },

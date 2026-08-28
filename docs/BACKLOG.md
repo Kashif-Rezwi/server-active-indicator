@@ -4,8 +4,8 @@ Deferred items from the pre-Phase-12 comprehensive audit (2026-08-27). None of t
 
 ## Repo & docs hygiene
 
-- **Delete `tsconfig.build.json`.** Nothing references it (build is tsup; typecheck uses `tsconfig.json`). Verified dead during the audit.
-- **Deduplicate pnpm build-deps config.** `.npmrc` (`onlyBuiltDependencies[]=esbuild`) and `pnpm-workspace.yaml` (`allowBuilds` + `onlyBuiltDependencies`) state the same thing twice. Keep the workspace file (pnpm 11 canonical) and drop the `.npmrc` line after confirming a fresh `pnpm install` still builds esbuild.
+- [x] **Delete `tsconfig.build.json`.** ✅ Deleted (2026-08-29 audit) — nothing referenced it (build is tsup; typecheck uses `tsconfig.json`).
+- [x] **Deduplicate pnpm build-deps config.** ✅ `.npmrc` deleted (2026-08-29 audit); `pnpm-workspace.yaml` (`allowBuilds` + `onlyBuiltDependencies`) is the single canonical config and a fresh `pnpm install` still builds esbuild.
 - **Add a minimal vanilla-JS example** (or a README recipe) — every runnable example is currently React, while framework-agnosticism is the headline claim. ~20 lines: `createMonitor` + `subscribe` + DOM toggle.
 
 ## Runtime micro-polish (behavior-preserving)
