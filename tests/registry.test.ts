@@ -2,30 +2,25 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createMonitor } from "../src/core/monitor";
 import { __engineCount } from "../src/core/registry";
-
-const URL = "https://api.example.com/health";
-
-function res(status: number, ok = status >= 200 && status < 300) {
-  return { ok, status } as Response;
-}
+import { HEALTH_URL, pinJitter, resetBrowserState, res } from "./helpers";
 
 describe("shared monitor registry", () => {
   beforeEach(() => {
     vi.useFakeTimers();
-    vi.spyOn(Math, "random").mockReturnValue(0.5);
+    pinJitter();
     vi.stubGlobal(
       "fetch",
       vi.fn(() => Promise.resolve(res(200))),
     );
   });
   afterEach(() => {
-    vi.restoreAllMocks();
     vi.useRealTimers();
+    resetBrowserState();
   });
 
   it("shares one engine for identical configs (one health loop)", async () => {
-    const a = createMonitor({ healthUrl: URL });
-    const b = createMonitor({ healthUrl: URL });
+    const a = createMonitor({ healthUrl: HEALTH_URL });
+    const b = createMonitor({ healthUrl: HEALTH_URL });
     expect(__engineCount()).toBe(1);
 
     await vi.advanceTimersByTimeAsync(50);
@@ -40,8 +35,8 @@ describe("shared monitor registry", () => {
   });
 
   it("separates engines when behavioral config differs", () => {
-    const a = createMonitor({ healthUrl: URL });
-    const b = createMonitor({ healthUrl: URL, revealDelay: 1_000 });
+    const a = createMonitor({ healthUrl: HEALTH_URL });
+    const b = createMonitor({ healthUrl: HEALTH_URL, revealDelay: 1_000 });
     expect(__engineCount()).toBe(2);
     a.destroy();
     b.destroy();
@@ -49,8 +44,8 @@ describe("shared monitor registry", () => {
   });
 
   it("keeps the engine alive until the last consumer releases it", async () => {
-    const a = createMonitor({ healthUrl: URL });
-    const b = createMonitor({ healthUrl: URL });
+    const a = createMonitor({ healthUrl: HEALTH_URL });
+    const b = createMonitor({ healthUrl: HEALTH_URL });
     await vi.advanceTimersByTimeAsync(50);
 
     a.destroy();
@@ -85,8 +80,8 @@ describe("shared monitor registry", () => {
   });
 
   it("destroy() detaches the handle's listeners from the shared engine", async () => {
-    const a = createMonitor({ healthUrl: URL });
-    const b = createMonitor({ healthUrl: URL });
+    const a = createMonitor({ healthUrl: HEALTH_URL });
+    const b = createMonitor({ healthUrl: HEALTH_URL });
     const aSeen: string[] = [];
     const bSeen: string[] = [];
     a.subscribe((s) => aSeen.push(s.status));
@@ -102,15 +97,15 @@ describe("shared monitor registry", () => {
   });
 
   it("destroy() is idempotent (second call is a no-op)", () => {
-    const a = createMonitor({ healthUrl: URL });
+    const a = createMonitor({ healthUrl: HEALTH_URL });
     a.destroy();
     expect(() => a.destroy()).not.toThrow();
     expect(__engineCount()).toBe(0);
   });
 
   it("stops sharing once one of the differing options changes (e.g. headers)", () => {
-    const a = createMonitor({ healthUrl: URL });
-    const b = createMonitor({ healthUrl: URL, headers: { authorization: "Bearer x" } });
+    const a = createMonitor({ healthUrl: HEALTH_URL });
+    const b = createMonitor({ healthUrl: HEALTH_URL, headers: { authorization: "Bearer x" } });
     expect(__engineCount()).toBe(2);
     a.destroy();
     b.destroy();
@@ -119,8 +114,8 @@ describe("shared monitor registry", () => {
   it("never shares different validate functions without an explicit key", () => {
     const validateA = () => true;
     const validateB = () => false;
-    const a = createMonitor({ healthUrl: URL, validate: validateA });
-    const b = createMonitor({ healthUrl: URL, validate: validateB });
+    const a = createMonitor({ healthUrl: HEALTH_URL, validate: validateA });
+    const b = createMonitor({ healthUrl: HEALTH_URL, validate: validateB });
     expect(__engineCount()).toBe(2);
     a.destroy();
     b.destroy();
@@ -128,8 +123,8 @@ describe("shared monitor registry", () => {
   });
 
   it("shares validate functions that opt in via the same key", () => {
-    const a = createMonitor({ healthUrl: URL, validate: () => true, key: "v1" });
-    const b = createMonitor({ healthUrl: URL, validate: () => false, key: "v1" });
+    const a = createMonitor({ healthUrl: HEALTH_URL, validate: () => true, key: "v1" });
+    const b = createMonitor({ healthUrl: HEALTH_URL, validate: () => false, key: "v1" });
     expect(__engineCount()).toBe(1);
     a.destroy();
     b.destroy();
@@ -151,7 +146,7 @@ describe("shared monitor registry", () => {
     Object.defineProperty(document, "visibilityState", { value: "hidden", configurable: true });
     document.dispatchEvent(new Event("visibilitychange"));
 
-    const m = createMonitor({ healthUrl: URL, revealDelay: 1_000 });
+    const m = createMonitor({ healthUrl: HEALTH_URL, revealDelay: 1_000 });
     expect(m.getSnapshot().status).toBe("checking");
     await vi.advanceTimersByTimeAsync(2_000);
     // Still checking — revealTimer was cleared on hidden and not refired.
@@ -169,7 +164,7 @@ describe("shared monitor registry", () => {
 
   it("clears active interval while hidden and resumes on visible", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(res(200)));
-    const m = createMonitor({ healthUrl: URL, activeCheckInterval: 1_000 });
+    const m = createMonitor({ healthUrl: HEALTH_URL, activeCheckInterval: 1_000 });
     await vi.advanceTimersByTimeAsync(50);
     expect(m.getSnapshot().status).toBe("active");
     const callsWhileActive = vi.mocked(fetch).mock.calls.length;

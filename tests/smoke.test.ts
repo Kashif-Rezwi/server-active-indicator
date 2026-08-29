@@ -18,9 +18,9 @@ describe("package entries", () => {
     });
   });
 
-  it("core entry exposes createMonitor (implemented in Phase 2)", () => {
+  it("core entry exposes createMonitor", () => {
     expect(typeof createMonitor).toBe("function");
-    // Requires a check source; validated for real in tests/monitor.test.ts.
+    // Requires a check source; behavior is validated in tests/monitor.test.ts.
     expect(() => createMonitor({})).toThrow(/healthUrl.*check/);
   });
 

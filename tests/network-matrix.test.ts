@@ -1,68 +1,34 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createMonitor } from "../src/core/monitor";
-import { __engineCount } from "../src/core/registry";
+import {
+  HEALTH_URL,
+  fetchAbortedOnly,
+  fetchRejecting,
+  fetchResolving,
+  pinJitter,
+  resetBrowserState,
+  res,
+} from "./helpers";
 
 /**
  * Engine-level network-condition matrix (sibling to monitor/check tests): locked
  * decision 4 independence, honesty constraints, browser-offline, 4xx fast-path.
  */
 
-const URL = "https://api.example.com/health";
 let testUrlCounter = 0;
 let testUrl = "";
-
-function res(status: number, ok = status >= 200 && status < 300) {
-  return { ok, status } as Response;
-}
-
-function fetchResolving(ms: number, status: number) {
-  return vi.fn(
-    () =>
-      new Promise<Response>((resolve) => {
-        setTimeout(() => resolve(res(status)), ms);
-      }),
-  );
-}
-
-function fetchRejecting(ms: number) {
-  return vi.fn(
-    () =>
-      new Promise<Response>((_r, reject) => {
-        setTimeout(() => reject(new TypeError("fetch failed")), ms);
-      }),
-  );
-}
-
-/** A fetch stub that resolves only when its `signal` is aborted (drives the per-attempt timeout). */
-function fetchThatOnlyResolvesOnAbort() {
-  return vi.fn(
-    (_url: string, init: { signal?: AbortSignal }) =>
-      new Promise<Response>((_resolve, reject) => {
-        init.signal?.addEventListener("abort", () => {
-          reject(new DOMException("aborted", "AbortError"));
-        });
-      }),
-  );
-}
 
 describe("network matrix", () => {
   beforeEach(() => {
     vi.useFakeTimers();
-    // Deterministic jitter: 0.8 + 0.5 * 0.4 = 1.0 exactly.
-    vi.spyOn(Math, "random").mockReturnValue(0.5);
-    testUrl = `${URL}?nm=${testUrlCounter++}`;
+    pinJitter();
+    testUrl = `${HEALTH_URL}?nm=${testUrlCounter++}`;
   });
   afterEach(() => {
-    vi.restoreAllMocks();
-    vi.unstubAllGlobals();
     vi.useRealTimers();
     // Restore jsdom's defaults so the next test starts from a clean slate.
-    Object.defineProperty(document, "visibilityState", { value: "visible", configurable: true });
-    Object.defineProperty(navigator, "onLine", { value: true, configurable: true });
-    if (__engineCount() !== 0) {
-      throw new Error(`leaked ${__engineCount()} engine(s) into the registry`);
-    }
+    resetBrowserState();
   });
 
   // ─── Locked decision 4: revealDelay vs timeout are independent ─────────
@@ -73,7 +39,9 @@ describe("network matrix", () => {
     vi.stubGlobal("fetch", fetchResolving(2_000, 200));
     const m = createMonitor({ healthUrl: testUrl, revealDelay: 3_000, timeout: 10_000 });
     await vi.advanceTimersByTimeAsync(2_100);
-    expect(m.getSnapshot().status).toBe("active");
+    const s = m.getSnapshot();
+    expect(s.status).toBe("active");
+    expect(s.wasCold).toBe(false); // no waking emission ever — the cold flag stays unset
     m.destroy();
   });
 
@@ -172,7 +140,8 @@ describe("network matrix", () => {
     mDns.destroy();
   });
 
-  // ─── Browser-offline: navigator.onLine is checked at attempt time ─────
+  // ─── Browser-offline: navigator.onLine is polled at attempt/result time,
+  // ─── never via an `offline` event (that's the documented contract) ─────
 
   it("browser-offline: navigator.onLine=false at construction → offline(browser) without making a fetch", async () => {
     const fetchMock = fetchResolving(50, 200);
@@ -183,13 +152,13 @@ describe("network matrix", () => {
     const s = m.getSnapshot();
     expect(s.status).toBe("offline");
     expect(s.offlineKind).toBe("browser");
-    expect(fetchMock).not.toHaveBeenCalled(); // engine never even tried
+    expect(fetchMock).not.toHaveBeenCalled(); // dispatch-time check short-circuits
     m.destroy();
   });
 
-  it("browser-offline: navigator flips to offline mid-warm → next attempt sees offline(browser)", async () => {
-    // The engine does not subscribe to the `offline` event; browser-offline is
-    // only observed at attempt time — this pins down that documented contract.
+  it("browser-offline: navigator flips to offline mid-warm → nothing happens until an attempt", async () => {
+    // No event subscription: the engine only learns about connectivity when it
+    // next attempts. With activeCheckInterval=0 (default) that's never.
     vi.stubGlobal("fetch", fetchResolving(50, 200));
     const m = createMonitor({ healthUrl: testUrl, revealDelay: 10 });
     await vi.advanceTimersByTimeAsync(100);
@@ -198,6 +167,45 @@ describe("network matrix", () => {
     Object.defineProperty(navigator, "onLine", { value: false, configurable: true });
     // Status unchanged: engine hasn't tried again, so it doesn't know.
     expect(m.getSnapshot().status).toBe("active");
+    m.destroy();
+  });
+
+  it("browser-offline mid-episode: the next scheduled attempt short-circuits to offline(browser)", async () => {
+    // Dispatch-time check again, now during a waking episode: fail once, flip
+    // the browser offline, and the next poll must not even dispatch a fetch.
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("Failed to fetch")));
+    const m = createMonitor({
+      healthUrl: testUrl,
+      revealDelay: 10,
+      pollInterval: 1_000,
+      backoffFactor: 1,
+      offlineAfter: 60_000,
+    });
+    await vi.advanceTimersByTimeAsync(60); // first attempt fails → waking
+    expect(m.getSnapshot().status).toBe("waking");
+    expect(m.getSnapshot().reason).toBe("request-failed");
+
+    const calls = vi.mocked(fetch).mock.calls.length;
+    Object.defineProperty(navigator, "onLine", { value: false, configurable: true });
+    await vi.advanceTimersByTimeAsync(1_100);
+    const s = m.getSnapshot();
+    expect(s.status).toBe("offline");
+    expect(s.offlineKind).toBe("browser");
+    expect(vi.mocked(fetch).mock.calls.length).toBe(calls); // short-circuited: no fetch dispatched
+    m.destroy();
+  });
+
+  it("browser-offline mid-flight: the failure classifies as offline(browser) at result time", async () => {
+    // Result-time check (the `isBrowserOffline()` branch inside onResult): the
+    // attempt was dispatched while online, but the browser dropped connectivity
+    // before the fetch settled — offline(browser), not waking.
+    vi.stubGlobal("fetch", fetchRejecting(200));
+    const m = createMonitor({ healthUrl: testUrl, revealDelay: 10_000 });
+    await vi.advanceTimersByTimeAsync(50); // attempt dispatched, still in flight
+    Object.defineProperty(navigator, "onLine", { value: false, configurable: true });
+    await vi.advanceTimersByTimeAsync(300); // fetch rejects at t=200; offline at result time
+    expect(m.getSnapshot().status).toBe("offline");
+    expect(m.getSnapshot().offlineKind).toBe("browser");
     m.destroy();
   });
 
@@ -236,84 +244,6 @@ describe("network matrix", () => {
     m.destroy();
   });
 
-  // ─── Coverage pins for engine branch hits ─────────────────────────────
-
-  it("coverage: a request-failed result that races with browser-offline → offline(browser)", async () => {
-    // Covers the `if (isBrowserOffline())` branch in onResult: the fetch rejects
-    // while the OS has flipped offline → offline(browser), not waking.
-    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("Failed to fetch")));
-    const m = createMonitor({
-      healthUrl: testUrl,
-      revealDelay: 10,
-      pollInterval: 1_000,
-      backoffFactor: 1,
-      offlineAfter: 60_000,
-    });
-    await vi.advanceTimersByTimeAsync(60); // first attempt fails → waking
-    expect(m.getSnapshot().status).toBe("waking");
-    expect(m.getSnapshot().reason).toBe("request-failed");
-
-    // Flip navigator offline. The next attempt's fetch will reject AND
-    // the engine will see `navigator.onLine === false` on result → 175.
-    Object.defineProperty(navigator, "onLine", { value: false, configurable: true });
-    await vi.advanceTimersByTimeAsync(1_100);
-    const s = m.getSnapshot();
-    expect(s.status).toBe("offline");
-    expect(s.offlineKind).toBe("browser");
-    m.destroy();
-  });
-
-  it("coverage: active-interval respects pauseWhenHidden (pauses when tab hidden)", async () => {
-    // Covers the hidden branch of the active-interval callback in engine.ts:
-    // scheduled, then hidden — the active check must NOT fire while hidden.
-    vi.stubGlobal("fetch", fetchResolving(50, 200));
-    const m = createMonitor({
-      healthUrl: testUrl,
-      revealDelay: 10,
-      activeCheckInterval: 1_000,
-    });
-    await vi.advanceTimersByTimeAsync(100);
-    expect(m.getSnapshot().status).toBe("active");
-
-    // Hide the tab and advance past several intervals. fetch should not
-    // be called again (active-interval pauses on hidden).
-    Object.defineProperty(document, "visibilityState", { value: "hidden", configurable: true });
-    document.dispatchEvent(new Event("visibilitychange"));
-    const callsBefore = vi.mocked(fetch).mock.calls.length;
-    await vi.advanceTimersByTimeAsync(3_500);
-    expect(vi.mocked(fetch).mock.calls.length).toBe(callsBefore);
-
-    m.destroy();
-  });
-
-  it("coverage: becoming visible again while active resumes the active-interval", async () => {
-    // Covers the visible-again `active` branch of onVisibilityChange: the
-    // active-interval must be rescheduled, not left dead.
-    vi.stubGlobal("fetch", fetchResolving(50, 200));
-    const m = createMonitor({
-      healthUrl: testUrl,
-      revealDelay: 10,
-      activeCheckInterval: 1_000,
-    });
-    await vi.advanceTimersByTimeAsync(100);
-    expect(m.getSnapshot().status).toBe("active");
-    const callsBefore = vi.mocked(fetch).mock.calls.length;
-
-    // Hide, wait, show again.
-    Object.defineProperty(document, "visibilityState", { value: "hidden", configurable: true });
-    document.dispatchEvent(new Event("visibilitychange"));
-    await vi.advanceTimersByTimeAsync(2_500);
-    Object.defineProperty(document, "visibilityState", { value: "visible", configurable: true });
-    document.dispatchEvent(new Event("visibilitychange"));
-
-    // After becoming visible, the active-interval should re-engage and
-    // fire within the next interval. Wait one full interval + fetch time.
-    await vi.advanceTimersByTimeAsync(1_100);
-    expect(vi.mocked(fetch).mock.calls.length).toBeGreaterThan(callsBefore);
-    expect(m.getSnapshot().status).toBe("active");
-    m.destroy();
-  });
-
   // ─── Legacy browsers: the engine must settle without modern AbortSignal APIs ───
 
   it("legacy browser without AbortSignal.any: checks still work and reach active", async () => {
@@ -338,7 +268,7 @@ describe("network matrix", () => {
     // @ts-expect-error — simulating a legacy runtime
     delete AbortSignal.timeout;
     try {
-      vi.stubGlobal("fetch", fetchThatOnlyResolvesOnAbort());
+      vi.stubGlobal("fetch", fetchAbortedOnly());
       const m = createMonitor({
         healthUrl: testUrl,
         revealDelay: 10,
