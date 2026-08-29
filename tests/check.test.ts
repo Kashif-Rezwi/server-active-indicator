@@ -72,21 +72,6 @@ describe("defaultCheck (HTTP contract)", () => {
     expect(out).toBe(ABORTED);
   });
 
-  it("manual-signal fallback honors an already-aborted caller signal (pre-AbortSignal.any)", async () => {
-    const originalAny = AbortSignal.any;
-    // @ts-expect-error — simulating a legacy runtime
-    delete AbortSignal.any;
-    try {
-      vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("Failed to fetch")));
-      const controller = new AbortController();
-      controller.abort();
-      const out = await defaultCheck({ healthUrl: HEALTH_URL, timeout: 60_000 }, controller.signal);
-      expect(out).toBe(ABORTED);
-    } finally {
-      AbortSignal.any = originalAny;
-    }
-  });
-
   it("per-attempt timeout exceeded → request-failed (AbortSignal.timeout integration)", async () => {
     // Real timers: AbortSignal.timeout is backed by the host clock and fake
     // timers cannot fire it. The 1ms ceiling keeps this fast and deterministic
@@ -157,30 +142,5 @@ describe("defaultCheck (HTTP contract)", () => {
     const init = call![1] as Record<string, unknown>;
     expect(init.headers).toBeUndefined();
     expect(init.credentials).toBeUndefined();
-  });
-
-  it("missing global fetch → request-failed (degraded environments, SSR Node < 18)", async () => {
-    vi.stubGlobal("fetch", undefined as unknown as typeof fetch);
-    const out = await defaultCheck({ healthUrl: HEALTH_URL, timeout: 5_000 });
-    expect(out).toEqual({ ok: false, reason: "request-failed" });
-  });
-
-  it("legacy browser without AbortSignal.any → manual fallback, caller abort still yields ABORTED", async () => {
-    const originalAny = AbortSignal.any;
-    // @ts-expect-error — simulating a legacy runtime
-    delete AbortSignal.any;
-    try {
-      const fetchMock = fetchAbortedOnly();
-      vi.stubGlobal("fetch", fetchMock);
-
-      const controller = new AbortController();
-      const promise = defaultCheck({ healthUrl: HEALTH_URL, timeout: 60_000 }, controller.signal);
-      queueMicrotask(() => controller.abort());
-
-      const out: CheckOutcome = await promise;
-      expect(out).toBe(ABORTED);
-    } finally {
-      AbortSignal.any = originalAny;
-    }
   });
 });

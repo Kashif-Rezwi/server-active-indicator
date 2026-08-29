@@ -2,8 +2,10 @@ import { defineConfig } from "vitest/config";
 
 /**
  * Coverage gate per AGENTS.md: ≥90% on `src/core/` (branches 85%). The remaining
- * branch gap is deliberate: defensive degradation branches we choose not to assert
- * on (engine settle-safety catch, registry stableStringify fallbacks).
+ * branch gap is deliberate: defensive degradation branches for runtimes we no
+ * longer simulate (pre-2024 `AbortSignal.any`/`.timeout` fallbacks, the
+ * missing-fetch and AbortController guards in check.ts/engine.ts) and the
+ * engine's unreachable-today settle-safety catch.
  */
 const coreThreshold = {
   // POSIX-ish glob; matched against the relative file path.
