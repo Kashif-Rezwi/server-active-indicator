@@ -229,13 +229,7 @@ export function createEngine(config: MonitorConfig, random: () => number = Math.
     if (destroyed || inFlight) return;
     if (cfg.pauseWhenHidden && isDocumentHidden()) return; // resume on visibilitychange
     inFlight = true;
-    try {
-      attemptController = new AbortController();
-    } catch {
-      // Degraded environment without a working AbortController: run the
-      // attempt without a caller-abort channel rather than wedging the loop.
-      attemptController = null;
-    }
+    attemptController = new AbortController();
     const started = Date.now();
 
     if (isBrowserOffline()) {

@@ -10,6 +10,7 @@
 - **Framework-agnostic core** + first-class React adapter (`useServerStatus`, `<ServerStatus>`).
 - **Honest by design** — never claims a server state the browser can't actually observe.
 - **Accessible out of the box** — `role="status"`, dark mode, reduced motion, themeable via CSS custom properties.
+- **Modern runtimes** — requires `AbortSignal.timeout`/`AbortSignal.any` (all evergreen browsers since 2023–24; Node ≥ 20.3 for SSR health checks).
 
 ![Demo: the indicator appears while a cold backend starts up, then confirms and disappears](https://raw.githubusercontent.com/Kashif-Rezwi/server-active-indicator/main/docs/assets/demo.gif)
 
