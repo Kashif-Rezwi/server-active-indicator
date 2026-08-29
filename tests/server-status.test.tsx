@@ -451,7 +451,9 @@ describe("ServerStatus — accessibility (axe-core)", () => {
     const { container } = render(
       <ServerStatus check={() => new Promise<boolean>(() => {})} revealDelay={30} />,
     );
-    await waitFor(() => expect(screen.getByRole("status")).toBeTruthy());
+    await waitFor(() =>
+      expect(screen.getByRole("status").getAttribute("data-state")).toBe("waking"),
+    );
     await assertNoViolations(container);
   }, 30_000);
 
@@ -480,7 +482,9 @@ describe("ServerStatus — accessibility (axe-core)", () => {
     const { container } = render(
       <ServerStatus check={async () => ({ ok: false, reason: "http-error", status: 404 })} />,
     );
-    await waitFor(() => expect(screen.getByRole("button", { name: "Retry" })).toBeTruthy());
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Retry" }).textContent).toBe("Retry"),
+    );
     await assertNoViolations(container);
   }, 30_000);
 
@@ -498,7 +502,9 @@ describe("ServerStatus — accessibility (axe-core)", () => {
     const { container } = render(
       <ServerStatus variant="pill" check={() => new Promise<boolean>(() => {})} revealDelay={30} />,
     );
-    await waitFor(() => expect(screen.getByRole("status")).toBeTruthy());
+    await waitFor(() =>
+      expect(screen.getByRole("status").getAttribute("data-state")).toBe("waking"),
+    );
     await assertNoViolations(container);
   }, 30_000);
 });

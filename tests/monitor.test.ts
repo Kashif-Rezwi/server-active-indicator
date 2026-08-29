@@ -45,7 +45,8 @@ describe("createMonitor", () => {
     expect(s.status).toBe("active");
     expect(s.wasCold).toBe(false);
     expect(s.attempts).toBe(1);
-    expect(s.lastLatencyMs).toBeGreaterThanOrEqual(100);
+    // Fake timers make Date.now deterministic: dispatch at t=0, resolve at t=100.
+    expect(s.lastLatencyMs).toBe(100);
     // Never passed through waking.
     expect(seen.some((x) => x.status === "waking")).toBe(false);
     m.destroy();
@@ -174,6 +175,19 @@ describe("createMonitor", () => {
     await vi.advanceTimersByTimeAsync(10_000);
     expect(seen.length).toBe(countBefore); // no emissions after destroy
     expect(m.getSnapshot().status).not.toBe("active");
+  });
+
+  it("refresh() after destroy() is a silent no-op", async () => {
+    vi.stubGlobal("fetch", fetchResolving(50, 200));
+    const m = createMonitor({ healthUrl: HEALTH_URL });
+    await vi.advanceTimersByTimeAsync(100);
+    expect(m.getSnapshot().status).toBe("active");
+    m.destroy();
+    const calls = vi.mocked(fetch).mock.calls.length;
+    expect(() => m.refresh()).not.toThrow();
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(vi.mocked(fetch).mock.calls.length).toBe(calls); // no attempt dispatched
+    expect(m.getSnapshot().status).toBe("active"); // snapshot frozen
   });
 
   it("uses a custom check() when provided (overrides healthUrl)", async () => {
@@ -398,6 +412,41 @@ describe("monitor policies — pauseWhenHidden, backoff, offlineAfter", () => {
     setVisibility("hidden");
     await vi.advanceTimersByTimeAsync(2_200); // two more polls fire while hidden
     expect(calls()).toBeGreaterThanOrEqual(3);
+    m.destroy();
+  });
+
+  it("cancels the reveal timer while hidden: no checking → waking promotion off-tab", async () => {
+    // A fetch slow enough to cross revealDelay must not promote the engine to
+    // waking while the tab is hidden — the reveal timer is cleared on hide.
+    vi.stubGlobal("fetch", fetchResolving(5_000, 200));
+    setVisibility("hidden");
+    const m = createMonitor({ healthUrl: testUrl, revealDelay: 1_000 });
+    expect(m.getSnapshot().status).toBe("checking");
+    await vi.advanceTimersByTimeAsync(2_000);
+    // The reveal threshold (t=1000) passed while hidden → still checking.
+    expect(m.getSnapshot().status).toBe("checking");
+
+    setVisibility("visible"); // resume: a fresh attempt, not the stale reveal
+    await vi.advanceTimersByTimeAsync(5_100);
+    expect(m.getSnapshot().status).toBe("active");
+    m.destroy();
+  });
+
+  it("pauses the active-check interval while hidden and resumes it on visible", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(res(200)));
+    const m = createMonitor({ healthUrl: testUrl, activeCheckInterval: 1_000 });
+    await vi.advanceTimersByTimeAsync(50);
+    expect(m.getSnapshot().status).toBe("active");
+    const callsWhileActive = vi.mocked(fetch).mock.calls.length;
+
+    setVisibility("hidden");
+    await vi.advanceTimersByTimeAsync(5_000);
+    // Interval cleared while hidden → no additional fetches.
+    expect(vi.mocked(fetch).mock.calls.length).toBe(callsWhileActive);
+
+    setVisibility("visible");
+    await vi.advanceTimersByTimeAsync(1_100);
+    expect(vi.mocked(fetch).mock.calls.length).toBeGreaterThan(callsWhileActive);
     m.destroy();
   });
 

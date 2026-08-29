@@ -146,6 +146,33 @@ describe("useServerStatus", () => {
     expect(second.result.current.status).toBe("active");
   });
 
+  it("captures options on mount: rerendering with different options keeps the same engine", async () => {
+    const fetchMock = fetchResolving(50, 200);
+    vi.stubGlobal("fetch", fetchMock);
+    const { result, rerender } = renderHook(
+      ({ url }: { url: string }) => useServerStatus({ healthUrl: url }),
+      { initialProps: { url: HEALTH_URL } },
+    );
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(60);
+    });
+    expect(result.current.status).toBe("active");
+    expect(__engineCount()).toBe(1);
+
+    // Capture-on-mount is a documented contract: live reconfiguration must not
+    // tear down and recreate the engine mid-episode (it keys the registry).
+    rerender({ url: OTHER_URL });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(100);
+    });
+    expect(__engineCount()).toBe(1);
+    // Every attempt still went to the mount-time URL — no reconfiguration.
+    expect(fetchMock.mock.calls.length).toBeGreaterThan(0);
+    const calls = fetchMock.mock.calls as unknown as Array<[string, unknown]>;
+    expect(calls.every(([url]) => url === HEALTH_URL)).toBe(true);
+    expect(result.current.status).toBe("active");
+  });
+
   it("StrictMode (warm): one engine after mount, silent while active, none after unmount", async () => {
     const fetchMock = fetchResolving(50, 200);
     vi.stubGlobal("fetch", fetchMock);

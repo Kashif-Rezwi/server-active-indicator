@@ -64,7 +64,33 @@ describe("defaultCheck (HTTP contract)", () => {
     expect(out).toBe(ABORTED);
   });
 
+  it("pre-aborted caller signal → ABORTED (settles before any network result)", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("Failed to fetch")));
+    const controller = new AbortController();
+    controller.abort();
+    const out = await defaultCheck({ healthUrl: HEALTH_URL, timeout: 60_000 }, controller.signal);
+    expect(out).toBe(ABORTED);
+  });
+
+  it("manual-signal fallback honors an already-aborted caller signal (pre-AbortSignal.any)", async () => {
+    const originalAny = AbortSignal.any;
+    // @ts-expect-error — simulating a legacy runtime
+    delete AbortSignal.any;
+    try {
+      vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("Failed to fetch")));
+      const controller = new AbortController();
+      controller.abort();
+      const out = await defaultCheck({ healthUrl: HEALTH_URL, timeout: 60_000 }, controller.signal);
+      expect(out).toBe(ABORTED);
+    } finally {
+      AbortSignal.any = originalAny;
+    }
+  });
+
   it("per-attempt timeout exceeded → request-failed (AbortSignal.timeout integration)", async () => {
+    // Real timers: AbortSignal.timeout is backed by the host clock and fake
+    // timers cannot fire it. The 1ms ceiling keeps this fast and deterministic
+    // enough on the real clock; engine-level timing uses fake timers instead.
     vi.stubGlobal("fetch", fetchAbortedOnly());
     const out = await defaultCheck({ healthUrl: HEALTH_URL, timeout: 1 });
     expect(out).toEqual({ ok: false, reason: "request-failed" });
@@ -155,19 +181,6 @@ describe("defaultCheck (HTTP contract)", () => {
       expect(out).toBe(ABORTED);
     } finally {
       AbortSignal.any = originalAny;
-    }
-  });
-
-  it("legacy browser without AbortSignal.timeout → manual fallback timer still bounds the attempt", async () => {
-    const originalTimeout = AbortSignal.timeout;
-    // @ts-expect-error — simulating a legacy runtime
-    delete AbortSignal.timeout;
-    try {
-      vi.stubGlobal("fetch", fetchAbortedOnly());
-      const out = await defaultCheck({ healthUrl: HEALTH_URL, timeout: 1 });
-      expect(out).toEqual({ ok: false, reason: "request-failed" });
-    } finally {
-      AbortSignal.timeout = originalTimeout;
     }
   });
 });

@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createMonitor } from "../src/core/monitor";
 import { __engineCount } from "../src/core/registry";
-import { HEALTH_URL, pinJitter, resetBrowserState, res } from "./helpers";
+import { HEALTH_URL, pinJitter, res } from "./helpers";
 
 describe("shared monitor registry", () => {
   beforeEach(() => {
@@ -15,7 +15,6 @@ describe("shared monitor registry", () => {
   });
   afterEach(() => {
     vi.useRealTimers();
-    resetBrowserState();
   });
 
   it("shares one engine for identical configs (one health loop)", async () => {
@@ -131,56 +130,21 @@ describe("shared monitor registry", () => {
     expect(__engineCount()).toBe(0);
   });
 
-  it("revealTimer does not promote to waking while tab is hidden", async () => {
-    // A slow fetch that would normally hit revealDelay while hidden must leave
-    // the snapshot at checking until the tab becomes visible.
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(
-        () =>
-          new Promise<Response>((resolve) => {
-            setTimeout(() => resolve(res(200)), 5_000);
-          }),
-      ),
-    );
-    Object.defineProperty(document, "visibilityState", { value: "hidden", configurable: true });
-    document.dispatchEvent(new Event("visibilitychange"));
-
-    const m = createMonitor({ healthUrl: HEALTH_URL, revealDelay: 1_000 });
-    expect(m.getSnapshot().status).toBe("checking");
-    await vi.advanceTimersByTimeAsync(2_000);
-    // Still checking — revealTimer was cleared on hidden and not refired.
-    expect(m.getSnapshot().status).toBe("checking");
-
-    Object.defineProperty(document, "visibilityState", { value: "visible", configurable: true });
-    document.dispatchEvent(new Event("visibilitychange"));
-    // Fresh attempt kicked on visible; let it resolve.
-    await vi.advanceTimersByTimeAsync(5_100);
-    expect(m.getSnapshot().status).toBe("active");
-
-    Object.defineProperty(document, "visibilityState", { value: "visible", configurable: true });
-    m.destroy();
-  });
-
-  it("clears active interval while hidden and resumes on visible", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(res(200)));
-    const m = createMonitor({ healthUrl: HEALTH_URL, activeCheckInterval: 1_000 });
-    await vi.advanceTimersByTimeAsync(50);
-    expect(m.getSnapshot().status).toBe("active");
-    const callsWhileActive = vi.mocked(fetch).mock.calls.length;
-
-    Object.defineProperty(document, "visibilityState", { value: "hidden", configurable: true });
-    document.dispatchEvent(new Event("visibilitychange"));
-    await vi.advanceTimersByTimeAsync(5_000);
-    // Active timer was paused while hidden → no additional fetches.
-    expect(vi.mocked(fetch).mock.calls.length).toBe(callsWhileActive);
-
-    Object.defineProperty(document, "visibilityState", { value: "visible", configurable: true });
-    document.dispatchEvent(new Event("visibilitychange"));
-    await vi.advanceTimersByTimeAsync(1_100);
-    expect(vi.mocked(fetch).mock.calls.length).toBeGreaterThan(callsWhileActive);
-
-    Object.defineProperty(document, "visibilityState", { value: "visible", configurable: true });
-    m.destroy();
+  it("keys apart configs whose behavioral fields carry null/array values (JS callers)", () => {
+    // `headers` is typed as a Record, but a plain-JS caller can pass anything;
+    // stableStringify must tolerate null and array shapes without crashing and
+    // simply produce distinct keys (a robustness pin, not an endorsement).
+    const a = createMonitor({
+      healthUrl: HEALTH_URL,
+      headers: null as unknown as Record<string, string>,
+    });
+    const b = createMonitor({
+      healthUrl: HEALTH_URL,
+      headers: ["x"] as unknown as Record<string, string>,
+    });
+    expect(__engineCount()).toBe(2);
+    a.destroy();
+    b.destroy();
+    expect(__engineCount()).toBe(0);
   });
 });

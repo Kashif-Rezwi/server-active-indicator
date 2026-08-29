@@ -246,22 +246,8 @@ describe("network matrix", () => {
 
   // ─── Legacy browsers: the engine must settle without modern AbortSignal APIs ───
 
-  it("legacy browser without AbortSignal.any: checks still work and reach active", async () => {
-    // Chrome <116 / Safari <17.4 / Firefox <124 lack AbortSignal.any; the
-    // fallback must never leave the engine stuck in-flight.
-    const originalAny = AbortSignal.any;
-    // @ts-expect-error — simulating a legacy runtime
-    delete AbortSignal.any;
-    try {
-      vi.stubGlobal("fetch", fetchResolving(50, 200));
-      const m = createMonitor({ healthUrl: testUrl, revealDelay: 10 });
-      await vi.advanceTimersByTimeAsync(100);
-      expect(m.getSnapshot().status).toBe("active");
-      m.destroy();
-    } finally {
-      AbortSignal.any = originalAny;
-    }
-  });
+  // (The AbortSignal.any fallback is covered at the check layer in check.test.ts,
+  // where caller-abort semantics live; the engine-level timeout fallback stays here.)
 
   it("legacy browser without AbortSignal.timeout: the per-attempt timeout still bounds requests", async () => {
     const originalTimeout = AbortSignal.timeout;
