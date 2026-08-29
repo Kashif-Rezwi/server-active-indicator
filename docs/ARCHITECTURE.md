@@ -46,7 +46,7 @@ Free-tier hosts (Render, Railway, Fly.io, Koyeb) spin a backend down after a few
 | 5 | `waking` is time-bounded by `offlineAfter` (60s) → `offline`; never "waking" forever | [src/core/engine.ts](../src/core/engine.ts) (L157-161) |
 | 6 | Shared monitor registry — N consumers of the same config share one health loop | [src/core/registry.ts](../src/core/registry.ts) |
 | 7 | Self-contained styling — injected `sai-`-prefixed CSS, inline SVG icons, no icon/CSS deps | [src/react/styles.ts](../src/react/styles.ts); [src/react/icons.tsx](../src/react/icons.tsx) |
-| 8 | No credentials by default — `headers`/`credentials` are explicit opt-ins | [src/core/check.ts](../src/core/check.ts) (L77-83) |
+| 8 | No credentials by default — `headers`/`credentials` are explicit opt-ins | [src/core/check.ts](../src/core/check.ts) (L39-40); [src/core/types.ts](../src/core/types.ts) (L23) |
 
 ---
 
@@ -60,8 +60,8 @@ Every file in the repo (excluding `node_modules/`, `dist/`, `coverage/`, `.git/`
 | --- | --- | --- |
 | [src/core/types.ts](../src/core/types.ts) | 77 | **The public contract.** `ServerStatus` (the 5-state union, L7), `FailureReason` (L10), `CheckResult` (custom-check result shape, L13), `MonitorConfig` (every option, L23), `MonitorSnapshot` (immutable per-emission state, L61). |
 | [src/core/defaults.ts](../src/core/defaults.ts) | 27 | `DEFAULT_CONFIG` — the locked defaults: `timeout: 10_000`, `revealDelay: 3_000`, `pollInterval: 5_000`, `offlineAfter: 60_000`, `successDisplayMs: 2_500`, `activeCheckInterval: 0`, `pauseWhenHidden: true`, `backoffFactor: 1.5`, `backoffCap: 15_000`. Typed with `satisfies Required<...>` so adding a required option without a default breaks the build. |
-| [src/core/check.ts](../src/core/check.ts) | 105 | The default network strategy. `ABORTED` sentinel symbol (L4), `CheckOutcome` (L5), `combineSignals` (timeout + caller-signal fusion with a pre-2024 fallback, L27), `defaultCheck` (L58) — a GET with `cache: "no-store"` that **never rejects**: every failure resolves to a structured `CheckOutcome`. 4xx maps to `reason: "http-error"` (misconfiguration, not cold start). `safeValidate` (L99) wraps user validators in try/catch. |
-| [src/core/engine.ts](../src/core/engine.ts) | 381 | **The heart.** `Engine` interface (L7), `resolveConfig` (L29), `createEngine` (L81) — the timer-driven health loop: `attempt()` (L228), `onResult()` (L166), `scheduleNext()` (L155) with jittered backoff `nextDelay()` (L147), the reveal timer, elapsed-seconds ticker (L124), active-interval re-checks (L278), visibilitychange pause/resume (L288), window `online` auto-recovery (L326), `refresh()` (L347), `destroy()` (L364). |
+| [src/core/check.ts](../src/core/check.ts) | 60 | The default network strategy. `ABORTED` sentinel symbol (L4), `CheckOutcome` (L5), `combineSignals` (timeout + caller-signal fusion via `AbortSignal.timeout`/`.any`, L20), `defaultCheck` (L29) — a GET with `cache: "no-store"` that **never rejects**: every failure resolves to a structured `CheckOutcome`. 4xx maps to `reason: "http-error"` (misconfiguration, not cold start). `safeValidate` (L54) wraps user validators in try/catch. |
+| [src/core/engine.ts](../src/core/engine.ts) | 375 | **The heart.** `Engine` interface (L7), `resolveConfig` (L29), `createEngine` (L81) — the timer-driven health loop: `attempt()` (L228), `onResult()` (L166), `scheduleNext()` (L155) with jittered backoff `nextDelay()` (L147), the reveal timer, elapsed-seconds ticker (L124), active-interval re-checks (L274), visibilitychange pause/resume (L282), window `online` auto-recovery (L321), `refresh()` (L341), `destroy()` (L357). |
 | [src/core/registry.ts](../src/core/registry.ts) | 111 | Shared-engine dedup. `Monitor` handle interface (L6), module-level `registry` Map (L18), `registryKey()` — the stable behavioral-config string (L24), `stableStringify()` with sorted keys (L56), ref-counted `acquireMonitor()` (L70), `__engineCount()` test introspection (L109). |
 | [src/core/monitor.ts](../src/core/monitor.ts) | 13 | The thin public factory: `createMonitor(config)` → `acquireMonitor(config)`. Exists so the public API name is decoupled from registry internals. |
 
@@ -87,14 +87,14 @@ Every file in the repo (excluding `node_modules/`, `dist/`, `coverage/`, `.git/`
 
 | File | Lines | Tests | Covers |
 | --- | --- | --- | --- |
-| [tests/setup.ts](../tests/setup.ts) | 8 | — | Global RTL `cleanup()` after each test (vitest globals are off, so auto-cleanup doesn't self-register); ensures monitor handles are released between tests. |
-| [tests/monitor.test.ts](../tests/monitor.test.ts) | 533 | 23 | The engine loop end-to-end through `createMonitor`: state transitions, reveal timer, backoff, `offlineAfter`, `refresh()`, destroy/ref-counting, config validation. Fake timers throughout. |
-| [tests/check.test.ts](../tests/check.test.ts) | 213 | 23 | `defaultCheck` in isolation: fetch mocking, `res.ok` vs `validate`, 4xx → `http-error`, 5xx → `request-failed`, abort/timeout paths, `ABORTED` sentinel, no-fetch degraded environments. |
-| [tests/network-matrix.test.ts](../tests/network-matrix.test.ts) | 419 | 17 | Engine-level condition matrix: locked decision 4 independence (`revealDelay` vs `timeout`), honesty constraints, browser-offline episodes and `online` recovery, 4xx fast-path, hidden-tab pause. |
-| [tests/registry.test.ts](../tests/registry.test.ts) | 191 | 12 | Registry keying: identical configs share one engine, differing timings don't, custom `check`/`validate` never share without an explicit `key`, ref-count teardown, `stableStringify` ordering. |
-| [tests/smoke.test.ts](../tests/smoke.test.ts) | 34 | 3 | Package-surface contract: both barrels export exactly the documented API; `DEFAULT_CONFIG` matches the locked table; `createMonitor({})` throws. |
-| [tests/use-server-status.test.tsx](../tests/use-server-status.test.tsx) | 317 | 12 | The hook via `renderHook`: own-monitor vs provider modes, StrictMode double-mount safety, capture-on-mount semantics, provider sharing, throw conditions, SSR snapshot stability. |
-| [tests/server-status.test.tsx](../tests/server-status.test.tsx) | 534 | 21 | The default UI via RTL + **axe-core** accessibility checks: silence rules, waking banner + elapsed counter, active confirmation & dismissal timer, offline Retry button, `messages` overrides, variant/class, style-injection idempotence, render-prop mode. |
+| [tests/setup.ts](../tests/setup.ts) | 22 | — | Global RTL `cleanup()` after each test (vitest globals are off, so auto-cleanup doesn't self-register); ensures monitor handles are released between tests. |
+| [tests/monitor.test.ts](../tests/monitor.test.ts) | 540 | 25 | The engine loop end-to-end through `createMonitor`: state transitions, reveal timer, backoff, `offlineAfter`, `refresh()`, destroy/ref-counting, config validation, hidden-tab policies. Fake timers throughout. |
+| [tests/check.test.ts](../tests/check.test.ts) | 146 | 21 | `defaultCheck` in isolation: fetch mocking, `res.ok` vs `validate`, 4xx → `http-error`, 5xx → `request-failed`, abort/timeout paths, pre-aborted caller signal, `ABORTED` sentinel. |
+| [tests/network-matrix.test.ts](../tests/network-matrix.test.ts) | 277 | 13 | Engine-level condition matrix: locked decision 4 independence (`revealDelay` vs `timeout`), honesty constraints, browser-offline episodes and `online` recovery, 4xx fast-path, hidden-tab pause, engine-level caller-abort semantics. |
+| [tests/registry.test.ts](../tests/registry.test.ts) | 150 | 11 | Registry keying: identical configs share one engine, differing timings don't, custom `check`/`validate` never share without an explicit `key`, ref-count teardown, `stableStringify` ordering. |
+| [tests/smoke.test.ts](../tests/smoke.test.ts) | 34 | 2 | Package-surface contract: both barrels export exactly the documented API; `DEFAULT_CONFIG` matches the locked table. |
+| [tests/use-server-status.test.tsx](../tests/use-server-status.test.tsx) | 320 | 13 | The hook via `renderHook`: own-monitor vs provider modes, StrictMode double-mount safety, capture-on-mount semantics, provider sharing, throw conditions, SSR snapshot stability. |
+| [tests/server-status.test.tsx](../tests/server-status.test.tsx) | 510 | 21 | The default UI via RTL + **axe-core** accessibility checks: silence rules, waking banner + elapsed counter, active confirmation & dismissal timer, offline Retry button, `messages` overrides, variant/class, style-injection idempotence, render-prop mode. |
 | [tests/use-sync-external-store.test.tsx](../tests/use-sync-external-store.test.tsx) | 91 | 5 | The React 17 legacy shim directly: subscribe/unsubscribe, render-then-subscribe convergence. (The native path is untestable under this repo's React 19 install — documented as accepted in [docs/BACKLOG.md](../docs/BACKLOG.md).) |
 
 ### 2.5 Build scripts — `scripts/`
@@ -276,7 +276,7 @@ One attempt produces exactly **one** emission (the attempt counter rides along w
 - **Single-flight:** `attempt()` returns immediately if `inFlight` ([engine.ts:229](../src/core/engine.ts)); `refresh()` is also a no-op while an attempt is outstanding ([engine.ts:348-351](../src/core/engine.ts)).
 - **Settle-safety:** a check that _throws_ is converted to `{ ok: false, reason: "request-failed" }` inside `attempt()` ([engine.ts:264-268](../src/core/engine.ts)) so `inFlight` can never stick and the loop can never die silently.
 - **Custom checks are bounded:** `runCustomCheck` races the user's promise against a `timeout` timer ([engine.ts:45-66](../src/core/engine.ts)) — a hung check cannot wedge the engine in `waking` forever (locked decision 5).
-- **Degraded environments:** no `fetch` → failed attempt ([check.ts:62-64](../src/core/check.ts)); no working `AbortController` → unsignaled fetch instead of failing every attempt ([check.ts:68-73](../src/core/check.ts)); no `AbortSignal.any` (pre-2024 browsers) → manual controller + timer fallback ([check.ts:38-51](../src/core/check.ts)).
+- **Modern runtimes required:** `AbortSignal.timeout`/`AbortSignal.any` (evergreen browsers since 2023–24) and `fetch` (Node ≥ 18); SSR health checks need Node ≥ 20.3. No internal degradation fallbacks — an unsupported runtime fails fast instead of silently losing the per-attempt timeout ([check.ts:20-23](../src/core/check.ts)).
 - **Hidden tab:** with `pauseWhenHidden` (default on), `visibilitychange` clears pending timers and stops intervals ([engine.ts:288-301](../src/core/engine.ts)); becoming visible resumes an attempt (waking/checking) or the active interval ([engine.ts:303-312](../src/core/engine.ts)).
 
 ---
@@ -366,18 +366,14 @@ This is the mechanism behind locked decision 6 and the README FAQ items ("Two co
 
 [src/core/check.ts](../src/core/check.ts) implements the default health check plus the abort/timeout machinery.
 
-**`combineSignals(timeoutMs, callerSignal?)` (L27)** fuses the per-attempt timeout with the engine's abort controller:
+**`combineSignals(timeoutMs, callerSignal?)` (L20)** fuses the per-attempt timeout with the engine's abort controller: `AbortSignal.timeout(timeoutMs)`, combined via `AbortSignal.any` when a caller signal exists (evergreen browsers since 2023–24, Node ≥ 20.3 — no fallback path; an unsupported runtime fails fast rather than losing the per-attempt timeout).
 
-- Fast path: native `AbortSignal.timeout`, combined via `AbortSignal.any` when a caller signal exists.
-- Fallback (pre-2024 browsers): a manual `AbortController` + `setTimeout` + abort-event forwarding, with a `cleanup()` that releases the timer/listener.
 - The engine passes its own per-attempt controller's signal as `callerSignal`, so `destroy()` (or an aborted refresh cycle) cancels the in-flight request and the check resolves to the `ABORTED` sentinel — a stateless no-op.
 
-**`defaultCheck(config, callerSignal?)` (L58):**
+**`defaultCheck(config, callerSignal?)` (L29):**
 
 | Step | Behavior | Outcome mapping |
 | --- | --- | --- |
-| `fetch` missing | Skip the request entirely | `{ ok: false, reason: "request-failed" }` |
-| `AbortController` throws | Degrade to unsignaled fetch (no timeout) | as above on failure |
 | Fetch throws (network, CORS, abort) | `callerSignal.aborted` → `ABORTED`; else failure | `ABORTED` or `{ ok: false, reason: "request-failed" }` |
 | 2xx (or `validate(res)` true) | success | `{ ok: true, status }` |
 | 4xx | server is up but the endpoint is wrong/auth'd | `{ ok: false, reason: "http-error", status }` → engine fast-paths to offline |
@@ -523,22 +519,24 @@ Runner: **Vitest 4**, jsdom environment, `tests/setup.ts` registers RTL cleanup.
 ```
 tests/
 ├─ smoke.test.ts                    package surface: exports + locked defaults
-├─ monitor.test.ts (23)  ──────────── engine lifecycle: states, reveal, backoff,
-│                                    offlineAfter, refresh, destroy, config errors
-├─ check.test.ts (23)    ──────────── defaultCheck unit: status mapping, validate,
-│                                    abort/timeout, degraded no-fetch path
-├─ network-matrix.test.ts (17) ────── cross-cutting conditions: decision-4
+├─ monitor.test.ts (25)  ──────────── engine lifecycle: states, reveal, backoff,
+│                                    offlineAfter, refresh, destroy, config errors,
+│                                    hidden-tab policies
+├─ check.test.ts (21)    ──────────── defaultCheck unit: status mapping, validate,
+│                                    abort/timeout, pre-aborted caller signal
+├─ network-matrix.test.ts (13) ────── cross-cutting conditions: decision-4
 │                                    independence, browser-offline episodes,
-│                                    online recovery, 4xx fast-path, hidden tab
-├─ registry.test.ts (12) ──────────── key derivation, sharing, ref-count teardown
-├─ use-server-status.test.tsx (12) ── hook: modes, StrictMode, capture-on-mount,
+│                                    online recovery, 4xx fast-path, hidden tab,
+│                                    engine-level caller-abort semantics
+├─ registry.test.ts (11) ──────────── key derivation, sharing, ref-count teardown
+├─ use-server-status.test.tsx (13) ── hook: modes, StrictMode, capture-on-mount,
 │                                    provider wiring, usage errors
 ├─ server-status.test.tsx (21) ────── default UI + axe-core a11y: silence rules,
 │                                    banners, retry, i18n messages, style inject
 └─ use-sync-external-store.test.tsx ─ React 17 legacy shim behavior (5)
 ```
 
-Coverage gate ([vitest.config.ts](../vitest.config.ts)): per-glob thresholds on `src/core/**` — **≥90% lines / functions / statements, ≥85% branches** (the branch allowance covers defensive SSR/degraded-environment branches that are deliberately not asserted). `src/react/**` is excluded from the gate but heavily exercised through the component/hook suites. [tests/smoke.test.ts](../tests/smoke.test.ts) pins `DEFAULT_CONFIG` to the exact locked table, so a silent default change fails CI.
+Coverage gate ([vitest.config.ts](../vitest.config.ts)): per-glob thresholds on `src/core/**` — **≥90% lines / functions / statements, ≥85% branches** (the branch allowance covers the engine's settle-safety catch, which is unreachable today — `runCustomCheck` cannot reject and `defaultCheck` never rejects). `src/react/**` is excluded from the gate but heavily exercised through the component/hook suites. [tests/smoke.test.ts](../tests/smoke.test.ts) pins `DEFAULT_CONFIG` to the exact locked table, so a silent default change fails CI.
 
 ---
 
@@ -603,7 +601,7 @@ Beyond the 8 locked decisions in [§1](#1-the-product-in-one-paragraph), these b
 | Shared registry is module-instance-scoped | Simple, zero-config dedup | Bundler package duplication (mixed ESM/CJS graphs) → two registries; standard library caveat | [registry.ts:18](../src/core/registry.ts) |
 | React 17 `useSyncExternalStore` fallback | Peer range includes `^17` | Legacy path is untestable under the repo's React 19 dev install | [use-sync-external-store.ts](../src/react/use-sync-external-store.ts) |
 | One emission per attempt (counter rides along) | Two listener callbacks per attempt meant two React renders per attempt | Slightly denser `onResult` signature | [engine.ts:273-275](../src/core/engine.ts) |
-| Graceful degradation over hard failure | Missing `fetch`/`AbortController`/`AbortSignal.any` degrade instead of throwing, so old/odd environments still converge to `offline` rather than crashing | Untimed attempts in the most degraded path | [check.ts:62-73](../src/core/check.ts), [engine.ts:233-238](../src/core/engine.ts) |
+| Modern runtimes over graceful degradation | `AbortSignal.timeout`/`.any` are baseline across evergreen browsers; the fallback code path was dead weight, and an unsupported runtime now fails fast (with an explicit signal) instead of silently losing the per-attempt timeout | Browsers older than ~2023–24 are unsupported | [check.ts:20-23](../src/core/check.ts) |
 | Jittered exponential backoff (±20%) | Prevents synchronized retry storms across many cold clients | Slightly irregular polling rhythm | [engine.ts:146-153](../src/core/engine.ts) |
 
 **Pragmatic build choices:** tsup over hand-rolled rollup config (two entries, four output formats, minimal config); a single `tsconfig.json` with `noEmit` (tsup emits, tsc verifies — no split build-type config, a former `tsconfig.build.json` was deliberately deleted); pnpm `allowBuilds` in `pnpm-workspace.yaml` as the single build-deps allowlist; plain `.mjs` node scripts instead of extra tooling for size budgeting and guarded publish.
