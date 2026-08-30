@@ -1,6 +1,6 @@
 {
   "name": "server-active-indicator",
-  "version": "0.2.3",
+  "version": "0.3.0",
   "description": "A tiny, framework-agnostic client-side status indicator for backends that sleep — tells users your app is waking up instead of looking broken.",
   "keywords": [
     "server-status",
