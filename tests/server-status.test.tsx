@@ -429,6 +429,39 @@ describe("ServerStatus — default UI", () => {
     expect(__engineCount()).toBe(0);
     expect(screen.queryByRole("status")).toBeNull();
   });
+
+  it("render-prop children receives a refresh function that triggers a re-check", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockRejectedValueOnce(new TypeError("down")) // first attempt: fail → waking
+      .mockResolvedValue(res(200)); // subsequent: succeed
+    vi.stubGlobal("fetch", fetchMock);
+
+    const refreshFnRef: { current: (() => void) | null } = { current: null };
+    render(
+      <ServerStatus healthUrl={HEALTH_URL} revealDelay={30} pollInterval={5_000} backoffFactor={1}>
+        {(snapshot) => {
+          refreshFnRef.current = snapshot.refresh;
+          return <span data-testid="rp-state">{snapshot.status}</span>;
+        }}
+      </ServerStatus>,
+    );
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(40);
+    }); // waking
+    expect(screen.getByTestId("rp-state").textContent).toBe("waking");
+
+    const callsBefore = fetchMock.mock.calls.length;
+    await act(async () => {
+      refreshFnRef.current?.(); // trigger re-check via the render prop's refresh
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(40);
+    });
+    expect(fetchMock.mock.calls.length).toBeGreaterThan(callsBefore);
+    expect(screen.getByTestId("rp-state").textContent).toBe("active");
+  });
 });
 
 describe("ServerStatus — accessibility (axe-core)", () => {

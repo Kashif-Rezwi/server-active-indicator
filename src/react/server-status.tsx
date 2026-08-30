@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 
-import { DEFAULT_CONFIG } from "../core/defaults";
 import type { MonitorConfig, MonitorSnapshot } from "../core/types";
 import { CheckIcon, OfflineIcon, SpinnerIcon, WifiOffIcon } from "./icons";
 import { injectServerStatusStyles } from "./styles";
@@ -15,9 +14,15 @@ export interface ServerStatusMessages {
   retry?: string;
 }
 
+/** Presentation-only default: how long the active confirmation stays visible (ms). */
+const DEFAULT_SUCCESS_DISPLAY_MS = 2_500;
+
 export interface ServerStatusProps extends MonitorConfig {
   /** Visual variant. Default: "banner". */
   variant?: "banner" | "pill";
+  /** How long the `active` confirmation stays visible (ms). Default: 2_500.
+   *  Set this on `<ServerStatus>` directly — the provider does not forward it. */
+  successDisplayMs?: number;
   /** Override any user-facing copy (i18n). */
   messages?: ServerStatusMessages;
   /** Extra class name on the root element. */
@@ -73,7 +78,7 @@ export function ServerStatus(props: ServerStatusProps): ReactNode {
     }
   }, [snapshot.status]);
 
-  const successDisplayMs = config.successDisplayMs ?? DEFAULT_CONFIG.successDisplayMs;
+  const successDisplayMs = config.successDisplayMs ?? DEFAULT_SUCCESS_DISPLAY_MS;
 
   useEffect(() => {
     if (snapshot.status !== "active" || !snapshot.wasCold || dismissed) return;

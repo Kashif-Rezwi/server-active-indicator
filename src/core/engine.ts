@@ -102,7 +102,15 @@ export function createEngine(config: MonitorConfig, random: () => number = Math.
   const setSnapshot = (patch: Partial<MonitorSnapshot>) => {
     if (destroyed) return;
     snapshot = { ...snapshot, ...patch };
-    for (const l of listeners) l(snapshot);
+    for (const l of listeners) {
+      try {
+        l(snapshot);
+      } catch (err) {
+        // A throwing subscriber must not break other subscribers or the engine loop.
+        // Report and continue — the state has already advanced.
+        console.error("server-active-indicator: subscriber threw an error", err);
+      }
+    }
   };
 
   const clearAttemptTimers = () => {

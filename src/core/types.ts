@@ -34,9 +34,7 @@ export interface MonitorConfig {
   pollInterval?: number;
   /** Give up on `waking` and declare `offline` after this much elapsed time (ms). Default: 60_000. */
   offlineAfter?: number;
-  /** How long the `active` confirmation stays visible (ms). Default: 2_500.
-   *  Presentation-only: set it on `<ServerStatus>` props (not the provider). */
-  successDisplayMs?: number;
+
   /** Opt-in periodic re-check while `active` to detect re-sleep (ms). Default: 0 (off). */
   activeCheckInterval?: number;
   /** Pause checks while the tab is hidden. Default: true. */

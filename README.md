@@ -6,7 +6,7 @@
 
 [![npm version](https://img.shields.io/npm/v/server-active-indicator.svg)](https://www.npmjs.com/package/server-active-indicator) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/Kashif-Rezwi/server-active-indicator/blob/main/LICENSE)
 
-- **Zero runtime dependencies** — core **~3.3 KB** gzipped, React adapter **~6.4 KB** gzipped.
+- **Zero runtime dependencies** — core **~3.1 KB** gzipped, React adapter **~6.2 KB** gzipped.
 - **Framework-agnostic core** + first-class React adapter (`useServerStatus`, `<ServerStatus>`).
 - **Honest by design** — never claims a server state the browser can't actually observe.
 - **Accessible out of the box** — `role="status"`, dark mode, reduced motion, themeable via CSS custom properties.
@@ -45,12 +45,33 @@ That's it — banner appears only during a cold start, confirms, and hides itsel
 ```js
 import { createMonitor } from "server-active-indicator";
 
+const el = document.getElementById("status-banner");
 const monitor = createMonitor({ healthUrl: "https://api.example.com/health" });
-const unsubscribe = monitor.subscribe((snapshot) => {
-  // snapshot.status: "unknown" | "checking" | "waking" | "active" | "offline"
-  renderYourOwnUi(snapshot);
+
+monitor.subscribe(({ status, elapsedSeconds, offlineKind }) => {
+  if (status === "checking" || status === "unknown") {
+    el.hidden = true;
+    return;
+  }
+  el.hidden = false;
+  if (status === "waking") {
+    el.textContent = `Server starting up\u2026 (${elapsedSeconds}s)`;
+    el.className = "status waking";
+  } else if (status === "active") {
+    el.textContent = "Server ready.";
+    el.className = "status active";
+    setTimeout(() => {
+      el.hidden = true;
+    }, 2_500);
+  } else {
+    el.textContent =
+      offlineKind === "browser" ? "You appear to be offline." : "Server unavailable.";
+    el.className = "status offline";
+  }
 });
-// later: unsubscribe(); monitor.destroy();
+
+// When the page/component tears down:
+// monitor.destroy();
 ```
 
 ## How it works

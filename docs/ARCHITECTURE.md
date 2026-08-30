@@ -59,7 +59,7 @@ Every file in the repo (excluding `node_modules/`, `dist/`, `coverage/`, `.git/`
 | File | Lines | Role |
 | --- | --- | --- |
 | [src/core/types.ts](../src/core/types.ts) | 77 | **The public contract.** `ServerStatus` (the 5-state union, L7), `FailureReason` (L10), `CheckResult` (custom-check result shape, L13), `MonitorConfig` (every option, L23), `MonitorSnapshot` (immutable per-emission state, L61). |
-| [src/core/defaults.ts](../src/core/defaults.ts) | 27 | `DEFAULT_CONFIG` — the locked defaults: `timeout: 10_000`, `revealDelay: 3_000`, `pollInterval: 5_000`, `offlineAfter: 60_000`, `successDisplayMs: 2_500`, `activeCheckInterval: 0`, `pauseWhenHidden: true`, `backoffFactor: 1.5`, `backoffCap: 15_000`. Typed with `satisfies Required<...>` so adding a required option without a default breaks the build. |
+| [src/core/defaults.ts](../src/core/defaults.ts) | 26 | `DEFAULT_CONFIG` — the locked engine defaults: `timeout: 10_000`, `revealDelay: 3_000`, `pollInterval: 5_000`, `offlineAfter: 60_000`, `activeCheckInterval: 0`, `pauseWhenHidden: true`, `backoffFactor: 1.5`, `backoffCap: 15_000`. (`successDisplayMs` is presentation-only — it lives on `<ServerStatus>` props, not here.) Typed with `satisfies Required<...>` so adding a required engine option without a default breaks the build. |
 | [src/core/check.ts](../src/core/check.ts) | 60 | The default network strategy. `ABORTED` sentinel symbol (L4), `CheckOutcome` (L5), `combineSignals` (timeout + caller-signal fusion via `AbortSignal.timeout`/`.any`, L20), `defaultCheck` (L29) — a GET with `cache: "no-store"` that **never rejects**: every failure resolves to a structured `CheckOutcome`. 4xx maps to `reason: "http-error"` (misconfiguration, not cold start). `safeValidate` (L54) wraps user validators in try/catch. |
 | [src/core/engine.ts](../src/core/engine.ts) | 375 | **The heart.** `Engine` interface (L7), `resolveConfig` (L29), `createEngine` (L81) — the timer-driven health loop: `attempt()` (L228), `onResult()` (L166), `scheduleNext()` (L155) with jittered backoff `nextDelay()` (L147), the reveal timer, elapsed-seconds ticker (L124), active-interval re-checks (L274), visibilitychange pause/resume (L282), window `online` auto-recovery (L321), `refresh()` (L341), `destroy()` (L357). |
 | [src/core/registry.ts](../src/core/registry.ts) | 111 | Shared-engine dedup. `Monitor` handle interface (L6), module-level `registry` Map (L18), `registryKey()` — the stable behavioral-config string (L24), `stableStringify()` with sorted keys (L56), ref-counted `acquireMonitor()` (L70), `__engineCount()` test introspection (L109). |
@@ -81,7 +81,7 @@ Every file in the repo (excluding `node_modules/`, `dist/`, `coverage/`, `.git/`
 
 | File | Lines | Role |
 | --- | --- | --- |
-| [src/index.ts](../src/index.ts) | 35 | Barrel for the root `.` subpath: `DEFAULT_CONFIG`, `createMonitor`, type `Monitor`, and the five core types. Zero React imports — safe to use without React installed. |
+| [src/index.ts](../src/index.ts) | 16 | Barrel for the root `.` subpath: `DEFAULT_CONFIG`, `createMonitor`, type `Monitor`, and the five core types. Zero React imports — safe to use without React installed. |
 
 ### 2.4 Tests — `tests/`
 
@@ -108,7 +108,7 @@ Every file in the repo (excluding `node_modules/`, `dist/`, `coverage/`, `.git/`
 
 | File | Role |
 | --- | --- |
-| [package.json](../package.json) | npm metadata: dual `exports` map (`.` and `./react`, each with `import`/`require` + `types` conditions), `files: ["dist"]`, `sideEffects: false`, optional react peer deps (`^17 \|\| ^18 \|\| ^19`), `publishConfig.provenance: true`, and the full script table (see [§13](#13-quality-gates--the-pnpm-verify-pipeline)). |
+| [package.json](../package.json) | npm metadata: dual `exports` map (`.` and `./react`, each with `import`/`require` + `types` conditions), `files: ["dist"]`, `sideEffects: ["./dist/react/*"]` (core is side-effect-free; the React subpath injects styles into `document.head`), optional react peer deps (`^17 \|\| ^18 \|\| ^19`), `publishConfig.provenance: true`, and the full script table (see [§13](#13-quality-gates--the-pnpm-verify-pipeline)). |
 | [tsconfig.json](../tsconfig.json) | Strict TypeScript (`strict`, `noUncheckedIndexedAccess`, `verbatimModuleSyntax`, `isolatedModules`, `moduleResolution: "bundler"`), `noEmit` — typecheck only; real emission is tsup's job. Includes `src`, `tests`, and the three root config files. |
 | [tsup.config.ts](../tsup.config.ts) | Two-entry build (see [§11](#11-build-pipeline--package-exports)): ESM+CJS+`.d.ts`+sourcemaps, `react`/`react-dom` external, `"use client"` banner **only** on the react entry. |
 | [vitest.config.ts](../vitest.config.ts) | jsdom environment, `tests/**` include, `tests/setup.ts`, v8 coverage with the per-glob `src/core/**` threshold gate (90/90/90/85). |

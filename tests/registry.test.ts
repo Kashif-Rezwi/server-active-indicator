@@ -147,4 +147,29 @@ describe("shared monitor registry", () => {
     b.destroy();
     expect(__engineCount()).toBe(0);
   });
+
+  it("concurrent refresh() from two handles on the same engine is single-flight", async () => {
+    // fetch is already stubbed in beforeEach to resolve 200; re-stub with a spy for call counting.
+    const fetchSpy = vi.fn(() => Promise.resolve(res(200)));
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const a = createMonitor({ healthUrl: HEALTH_URL });
+    const b = createMonitor({ healthUrl: HEALTH_URL }); // shares engine via registry
+    expect(__engineCount()).toBe(1);
+
+    await vi.advanceTimersByTimeAsync(50); // initial attempt settles → active
+    expect(a.getSnapshot().status).toBe("active");
+
+    const callsBefore = fetchSpy.mock.calls.length;
+    a.refresh(); // starts a new in-flight attempt
+    b.refresh(); // single-flight: engine's inFlight flag is already true → no-op
+    await vi.advanceTimersByTimeAsync(50);
+
+    // Exactly one additional fetch, not two.
+    expect(fetchSpy.mock.calls.length).toBe(callsBefore + 1);
+
+    a.destroy();
+    b.destroy();
+    expect(__engineCount()).toBe(0);
+  });
 });

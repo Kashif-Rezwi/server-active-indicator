@@ -16,7 +16,6 @@ describe("package entries", () => {
       revealDelay: 3_000,
       pollInterval: 5_000,
       offlineAfter: 60_000,
-      successDisplayMs: 2_500,
       activeCheckInterval: 0,
       pauseWhenHidden: true,
       backoffFactor: 1.5,

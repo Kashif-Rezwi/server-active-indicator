@@ -272,22 +272,31 @@ describe("createMonitor", () => {
     m.destroy();
   });
 
-  it("a throwing subscriber does not corrupt engine state (notification isolation is not yet guaranteed)", async () => {
-    // Pinned current behavior, deliberately: setSnapshot updates the snapshot
-    // before notifying listeners, and a listener exception propagates out of
-    // the synchronous refresh() call. Per-listener error isolation is a flagged
-    // follow-up — a throwing consumer can break the notification loop today.
+  it("a throwing subscriber is isolated — subsequent subscribers still receive the update", async () => {
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     vi.stubGlobal("fetch", fetchResolving(50, 200));
     const m = createMonitor({ healthUrl: HEALTH_URL });
     // Let the auto-started attempt settle first: while an attempt is in flight
     // refresh() single-flight no-ops and would never reach the listeners.
     await vi.advanceTimersByTimeAsync(100);
+
+    const seen: string[] = [];
     m.subscribe(() => {
       throw new Error("bad subscriber");
     });
+    m.subscribe((s) => seen.push(s.status)); // registered after the throwing one
 
-    expect(() => m.refresh()).toThrow("bad subscriber");
-    expect(m.getSnapshot().status).toBe("checking"); // state advanced before listeners ran
+    expect(() => m.refresh()).not.toThrow(); // no longer propagates
+    expect(consoleSpy).toHaveBeenCalledWith(
+      "server-active-indicator: subscriber threw an error",
+      expect.any(Error),
+    );
+    expect(m.getSnapshot().status).toBe("checking"); // state advanced correctly
+
+    await vi.advanceTimersByTimeAsync(100);
+    expect(seen).toContain("active"); // second subscriber received updates despite the first throwing
+
+    consoleSpy.mockRestore();
     m.destroy();
   });
 });
@@ -536,5 +545,16 @@ describe("monitor policies — pauseWhenHidden, backoff, offlineAfter", () => {
     await vi.advanceTimersByTimeAsync(100);
     expect(m.getSnapshot().status).toBe("active");
     m.destroy();
+  });
+
+  it("is SSR-safe for online event teardown: window undefined → destroy() does not throw", async () => {
+    vi.stubGlobal("fetch", fetchResolving(50, 200));
+    // Simulate SSR / environments without a window object — the engine's
+    // detachOnline() guards with `typeof window`; it must not throw.
+    vi.stubGlobal("window", undefined);
+    const m = createMonitor({ healthUrl: testUrl, revealDelay: 10 });
+    await vi.advanceTimersByTimeAsync(100);
+    expect(m.getSnapshot().status).toBe("active");
+    expect(() => m.destroy()).not.toThrow();
   });
 });

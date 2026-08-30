@@ -23,7 +23,9 @@
   "license": "MIT",
   "author": "Kashif Rezwi",
   "type": "module",
-  "sideEffects": false,
+  "sideEffects": [
+    "./dist/react/*"
+  ],
   "exports": {
     ".": {
       "import": {
