@@ -12,7 +12,7 @@ Deferred items from the pre-Phase-12 comprehensive audit (2026-08-27). None of t
 
 - [x] **Fold the per-attempt double emission into one.** ✅ Done (2026-08-29) — `attempt()` now passes the incremented counter into `onResult`, which merges it into its single state-change `setSnapshot` (the ABORTED path keeps the counter-only emission). One listener callback per attempt instead of two.
 - [x] **Reset `elapsedSeconds: 0` on transition to `active`.** ✅ Done (2026-08-29) — included in the `active` branch's `setSnapshot`.
-- [x] **`engines: { node: ">=18" }`** in package.json is meaningless for a browser library. Keep (harmless) or drop. ✅ Dropped (2026-08-29).
+- [x] **`engines: { node: ">=18" }`** in package.json is meaningless for a browser library. Keep (harmless) or drop. ✅ Dropped (2026-08-29). **Re-added as `node: ">=20.3.0"` (2026-08-29 audit)** — now meaningful, not browser-related: it declares the Node floor for SSR/server-side health checks (`AbortSignal.any` arrived in Node 20.3) and resolves the publint advisory. Update it if the runtime floor ever changes.
 
 ## Documented-as-deliberate behaviors to revisit only with real-world evidence
 

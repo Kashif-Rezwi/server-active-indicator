@@ -12,43 +12,14 @@ interface ResolvedRequestConfig {
   validate?: (res: Response) => boolean;
 }
 
-interface CombinedSignal {
-  signal: AbortSignal | undefined;
-  /** Release the fallback timer/listener. No-op on the native path. */
-  cleanup: () => void;
-}
-
-const noop = (): void => {};
-
 /**
- * Combines the per-attempt timeout with the caller's abort signal; falls back to
- * a manual controller + timer where `AbortSignal.any` is unavailable (pre-2024).
+ * Combines the per-attempt timeout with the caller's abort signal. Requires the
+ * evergreen `AbortSignal.timeout`/`AbortSignal.any` pair (all evergreen browsers
+ * since 2023–24; Node ≥ 20.3) — no manual fallback for older runtimes.
  */
-function combineSignals(timeoutMs: number, callerSignal?: AbortSignal): CombinedSignal {
-  if (
-    typeof AbortSignal.timeout === "function" &&
-    (callerSignal === undefined || typeof AbortSignal.any === "function")
-  ) {
-    const timeoutSignal = AbortSignal.timeout(timeoutMs);
-    return {
-      signal: callerSignal ? AbortSignal.any([timeoutSignal, callerSignal]) : timeoutSignal,
-      cleanup: noop,
-    };
-  }
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  const onCallerAbort = () => controller.abort();
-  if (callerSignal) {
-    if (callerSignal.aborted) controller.abort();
-    else callerSignal.addEventListener("abort", onCallerAbort, { once: true });
-  }
-  return {
-    signal: controller.signal,
-    cleanup: () => {
-      clearTimeout(timer);
-      callerSignal?.removeEventListener("abort", onCallerAbort);
-    },
-  };
+function combineSignals(timeoutMs: number, callerSignal?: AbortSignal): AbortSignal {
+  const timeoutSignal = AbortSignal.timeout(timeoutMs);
+  return callerSignal ? AbortSignal.any([timeoutSignal, callerSignal]) : timeoutSignal;
 }
 
 /**
@@ -59,35 +30,19 @@ export async function defaultCheck(
   config: ResolvedRequestConfig,
   callerSignal?: AbortSignal,
 ): Promise<CheckOutcome> {
-  if (typeof fetch !== "function") {
-    return { ok: false, reason: "request-failed" };
-  }
-
-  // If even the AbortController machinery is missing, degrade to an unsignaled
-  // fetch (no per-attempt timeout) rather than fail every attempt.
-  let combined: CombinedSignal;
-  try {
-    combined = combineSignals(config.timeout, callerSignal);
-  } catch {
-    combined = { signal: undefined, cleanup: noop };
-  }
-
   let res: Response;
   try {
     res = await fetch(config.healthUrl, {
       method: "GET",
       cache: "no-store",
-      signal: combined.signal,
+      signal: combineSignals(config.timeout, callerSignal),
       headers: config.headers,
       credentials: config.credentials,
     });
-  } catch (err) {
-    combined.cleanup();
+  } catch {
     if (callerSignal?.aborted) return ABORTED;
-    void err;
     return { ok: false, reason: "request-failed" };
   }
-  combined.cleanup();
 
   const ok = config.validate ? safeValidate(config.validate, res) : res.ok;
   if (ok) return { ok: true, status: res.status };

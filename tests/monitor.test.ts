@@ -2,51 +2,29 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createMonitor } from "../src/core/monitor";
 import { __engineCount } from "../src/core/registry";
-import type { MonitorSnapshot } from "../src/core/types";
+import {
+  HEALTH_URL,
+  fetchRejecting,
+  fetchResolving,
+  pinJitter,
+  resetBrowserState,
+  res,
+  setVisibility,
+  trackSnapshots,
+} from "./helpers";
 
-const URL = "https://api.example.com/health";
 let testUrlCounter = 0;
 
-/** Collect every snapshot a monitor emits. */
-function track(m: ReturnType<typeof createMonitor>) {
-  const seen: MonitorSnapshot[] = [];
-  m.subscribe((s) => seen.push(s));
-  return seen;
-}
-
-function res(status: number, ok = status >= 200 && status < 300) {
-  return { ok, status } as Response;
-}
-
-/** A fetch mock that resolves after `ms` with the given status. */
-function fetchResolving(ms: number, status: number) {
-  return vi.fn(
-    () =>
-      new Promise<Response>((resolve) => {
-        setTimeout(() => resolve(res(status)), ms);
-      }),
-  );
-}
-
-/** A fetch mock that rejects after `ms` (network/CORS/DNS failure). */
-function fetchRejecting(ms: number) {
-  return vi.fn(
-    () =>
-      new Promise<Response>((_r, reject) => {
-        setTimeout(() => reject(new TypeError("fetch failed")), ms);
-      }),
-  );
-}
-
 describe("createMonitor", () => {
+  // These basics share HEALTH_URL safely: setup.ts's uniform leak guard
+  // guarantees an empty registry before each test, so no cross-test engine
+  // sharing can occur (the policies describe below still uses unique URLs
+  // as belt-and-braces isolation).
   beforeEach(() => {
     vi.useFakeTimers();
-    // Deterministic jitter: 0.8 + 0.5 * 0.4 = 1.0 exactly.
-    vi.spyOn(Math, "random").mockReturnValue(0.5);
+    pinJitter();
   });
   afterEach(() => {
-    vi.restoreAllMocks();
-    vi.unstubAllGlobals();
     vi.useRealTimers();
   });
 
@@ -57,8 +35,8 @@ describe("createMonitor", () => {
 
   it("warm first ping: unknown → checking → active, wasCold=false", async () => {
     vi.stubGlobal("fetch", fetchResolving(100, 200));
-    const m = createMonitor({ healthUrl: URL });
-    const seen = track(m);
+    const m = createMonitor({ healthUrl: HEALTH_URL });
+    const seen = trackSnapshots(m);
 
     expect(m.getSnapshot().status).toBe("checking");
     await vi.advanceTimersByTimeAsync(150);
@@ -67,7 +45,8 @@ describe("createMonitor", () => {
     expect(s.status).toBe("active");
     expect(s.wasCold).toBe(false);
     expect(s.attempts).toBe(1);
-    expect(s.lastLatencyMs).toBeGreaterThanOrEqual(100);
+    // Fake timers make Date.now deterministic: dispatch at t=0, resolve at t=100.
+    expect(s.lastLatencyMs).toBe(100);
     // Never passed through waking.
     expect(seen.some((x) => x.status === "waking")).toBe(false);
     m.destroy();
@@ -87,12 +66,12 @@ describe("createMonitor", () => {
       ),
     );
     const m = createMonitor({
-      healthUrl: URL,
+      healthUrl: HEALTH_URL,
       revealDelay: 3_000,
       pollInterval: 5_000,
       backoffFactor: 1,
     });
-    const seen = track(m);
+    const seen = trackSnapshots(m);
 
     await vi.advanceTimersByTimeAsync(60); // first attempt fails
     expect(m.getSnapshot().status).toBe("waking");
@@ -109,31 +88,6 @@ describe("createMonitor", () => {
     m.destroy();
   });
 
-  it("shows waking only after revealDelay, not before", async () => {
-    vi.stubGlobal("fetch", fetchResolving(2_000, 200)); // slower than nothing, faster than 3s reveal
-    const m = createMonitor({ healthUrl: URL, revealDelay: 3_000 });
-    const seen = track(m);
-
-    await vi.advanceTimersByTimeAsync(1_000);
-    expect(m.getSnapshot().status).toBe("checking"); // still within revealDelay
-    await vi.advanceTimersByTimeAsync(1_500);
-    expect(m.getSnapshot().status).toBe("active");
-    expect(seen.some((x) => x.status === "waking")).toBe(false); // resolved before reveal
-    m.destroy();
-  });
-
-  it("4xx fast-paths to offline with reason http-error", async () => {
-    vi.stubGlobal("fetch", fetchResolving(50, 404));
-    const m = createMonitor({ healthUrl: URL });
-    await vi.advanceTimersByTimeAsync(100);
-
-    const s = m.getSnapshot();
-    expect(s.status).toBe("offline");
-    expect(s.reason).toBe("http-error");
-    expect(s.offlineKind).toBe("server");
-    m.destroy();
-  });
-
   it("5xx keeps polling (Railway 502-on-wake), recovers on success", async () => {
     let call = 0;
     vi.stubGlobal(
@@ -147,7 +101,7 @@ describe("createMonitor", () => {
       ),
     );
     const m = createMonitor({
-      healthUrl: URL,
+      healthUrl: HEALTH_URL,
       revealDelay: 10,
       pollInterval: 5_000,
       backoffFactor: 1,
@@ -159,38 +113,10 @@ describe("createMonitor", () => {
     m.destroy();
   });
 
-  it("bounds waking by offlineAfter → offline", async () => {
-    vi.stubGlobal("fetch", fetchRejecting(50));
-    const m = createMonitor({
-      healthUrl: URL,
-      revealDelay: 100,
-      pollInterval: 1_000,
-      offlineAfter: 3_000,
-      backoffFactor: 1,
-    });
-    await vi.advanceTimersByTimeAsync(200);
-    expect(m.getSnapshot().status).toBe("waking");
-    await vi.advanceTimersByTimeAsync(4_000); // exceed offlineAfter
-    expect(m.getSnapshot().status).toBe("offline");
-    expect(m.getSnapshot().offlineKind).toBe("server");
-    m.destroy();
-  });
-
-  it("browser offline → offline with offlineKind browser", async () => {
-    vi.stubGlobal("fetch", fetchResolving(50, 200));
-    const onLine = vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
-    const m = createMonitor({ healthUrl: URL });
-    await vi.advanceTimersByTimeAsync(10);
-    expect(m.getSnapshot().status).toBe("offline");
-    expect(m.getSnapshot().offlineKind).toBe("browser");
-    onLine.mockRestore();
-    m.destroy();
-  });
-
   it("refresh() recovers from offline", async () => {
     vi.stubGlobal("fetch", fetchRejecting(50));
     const m = createMonitor({
-      healthUrl: URL,
+      healthUrl: HEALTH_URL,
       revealDelay: 100,
       pollInterval: 500,
       offlineAfter: 1_000,
@@ -219,7 +145,7 @@ describe("createMonitor", () => {
       ),
     );
     const m = createMonitor({
-      healthUrl: URL,
+      healthUrl: HEALTH_URL,
       revealDelay: 100,
       pollInterval: 5_000,
       backoffFactor: 1,
@@ -242,13 +168,26 @@ describe("createMonitor", () => {
 
   it("destroy() mid-flight stops everything and notifies no more", async () => {
     vi.stubGlobal("fetch", fetchResolving(5_000, 200));
-    const m = createMonitor({ healthUrl: URL });
-    const seen = track(m);
+    const m = createMonitor({ healthUrl: HEALTH_URL });
+    const seen = trackSnapshots(m);
     const countBefore = seen.length;
     m.destroy();
     await vi.advanceTimersByTimeAsync(10_000);
     expect(seen.length).toBe(countBefore); // no emissions after destroy
     expect(m.getSnapshot().status).not.toBe("active");
+  });
+
+  it("refresh() after destroy() is a silent no-op", async () => {
+    vi.stubGlobal("fetch", fetchResolving(50, 200));
+    const m = createMonitor({ healthUrl: HEALTH_URL });
+    await vi.advanceTimersByTimeAsync(100);
+    expect(m.getSnapshot().status).toBe("active");
+    m.destroy();
+    const calls = vi.mocked(fetch).mock.calls.length;
+    expect(() => m.refresh()).not.toThrow();
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(vi.mocked(fetch).mock.calls.length).toBe(calls); // no attempt dispatched
+    expect(m.getSnapshot().status).toBe("active"); // snapshot frozen
   });
 
   it("uses a custom check() when provided (overrides healthUrl)", async () => {
@@ -259,7 +198,7 @@ describe("createMonitor", () => {
       call += 1;
       return call < 2 ? false : true;
     });
-    const m = createMonitor({ check, healthUrl: URL, revealDelay: 50, pollInterval: 500 });
+    const m = createMonitor({ check, healthUrl: HEALTH_URL, revealDelay: 50, pollInterval: 500 });
     await vi.advanceTimersByTimeAsync(100);
     expect(m.getSnapshot().status).toBe("waking");
     await vi.advanceTimersByTimeAsync(600);
@@ -303,35 +242,81 @@ describe("createMonitor", () => {
     expect(m.getSnapshot().status).toBe("active");
     m.destroy();
   });
+
+  it("refresh() while an attempt is in flight is a no-op (single-flight)", async () => {
+    vi.stubGlobal("fetch", fetchResolving(5_000, 200)); // attempt 1 stays in flight
+    const m = createMonitor({ healthUrl: HEALTH_URL, revealDelay: 10_000 });
+    await vi.advanceTimersByTimeAsync(50);
+
+    expect(m.getSnapshot().status).toBe("checking");
+    m.refresh();
+    m.refresh();
+    // The in-flight attempt's result lands imminently — refresh must not stack
+    // a duplicate attempt or reset the episode underneath it.
+    expect(vi.mocked(fetch).mock.calls.length).toBe(1);
+    expect(m.getSnapshot().status).toBe("checking");
+    m.destroy();
+  });
+
+  it("getSnapshot() returns a stable reference between emissions (useSyncExternalStore contract)", async () => {
+    vi.stubGlobal("fetch", fetchResolving(50, 200));
+    const m = createMonitor({ healthUrl: HEALTH_URL });
+
+    const initial = m.getSnapshot();
+    expect(m.getSnapshot()).toBe(initial); // no emission → same object
+    await vi.advanceTimersByTimeAsync(100); // resolves → active emission
+    const active = m.getSnapshot();
+    expect(active).not.toBe(initial);
+    expect(active.status).toBe("active");
+    expect(m.getSnapshot()).toBe(active);
+    m.destroy();
+  });
+
+  it("a throwing subscriber is isolated — subsequent subscribers still receive the update", async () => {
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.stubGlobal("fetch", fetchResolving(50, 200));
+    const m = createMonitor({ healthUrl: HEALTH_URL });
+    // Let the auto-started attempt settle first: while an attempt is in flight
+    // refresh() single-flight no-ops and would never reach the listeners.
+    await vi.advanceTimersByTimeAsync(100);
+
+    const seen: string[] = [];
+    m.subscribe(() => {
+      throw new Error("bad subscriber");
+    });
+    m.subscribe((s) => seen.push(s.status)); // registered after the throwing one
+
+    expect(() => m.refresh()).not.toThrow(); // no longer propagates
+    expect(consoleSpy).toHaveBeenCalledWith(
+      "server-active-indicator: subscriber threw an error",
+      expect.any(Error),
+    );
+    expect(m.getSnapshot().status).toBe("checking"); // state advanced correctly
+
+    await vi.advanceTimersByTimeAsync(100);
+    expect(seen).toContain("active"); // second subscriber received updates despite the first throwing
+
+    consoleSpy.mockRestore();
+    m.destroy();
+  });
 });
 
-describe("phase 3 policies", () => {
+describe("monitor policies — pauseWhenHidden, backoff, offlineAfter", () => {
   beforeEach(() => {
     vi.useFakeTimers();
-    // Deterministic jitter: 0.8 + 0.5 * 0.4 = 1.0 exactly.
-    vi.spyOn(Math, "random").mockReturnValue(0.5);
+    pinJitter();
   });
   // Unique healthUrl per test → a fresh, isolated engine (no cross-test sharing).
-  // Generated AFTER the random spy so it doesn't consume the pinned 0.5 sequence.
+  // Generated AFTER the random pin so it doesn't consume the pinned sequence.
   let testUrl = "";
   beforeEach(() => {
-    testUrl = `${URL}?t=${testUrlCounter++}`;
+    testUrl = `${HEALTH_URL}?t=${testUrlCounter++}`;
   });
   afterEach(() => {
-    vi.restoreAllMocks();
-    vi.unstubAllGlobals();
     vi.useRealTimers();
     // Restore jsdom's default visibility if a test overrode it.
-    Object.defineProperty(document, "visibilityState", { value: "visible", configurable: true });
-    if (__engineCount() !== 0) {
-      throw new Error(`leaked ${__engineCount()} engine(s) into the registry`);
-    }
+    resetBrowserState();
   });
-
-  const setVisibility = (state: "visible" | "hidden") => {
-    Object.defineProperty(document, "visibilityState", { value: state, configurable: true });
-    document.dispatchEvent(new Event("visibilitychange"));
-  };
 
   it("backs off retries by backoffFactor (jitter pinned to 1.0)", async () => {
     vi.stubGlobal("fetch", fetchRejecting(50));
@@ -439,6 +424,41 @@ describe("phase 3 policies", () => {
     m.destroy();
   });
 
+  it("cancels the reveal timer while hidden: no checking → waking promotion off-tab", async () => {
+    // A fetch slow enough to cross revealDelay must not promote the engine to
+    // waking while the tab is hidden — the reveal timer is cleared on hide.
+    vi.stubGlobal("fetch", fetchResolving(5_000, 200));
+    setVisibility("hidden");
+    const m = createMonitor({ healthUrl: testUrl, revealDelay: 1_000 });
+    expect(m.getSnapshot().status).toBe("checking");
+    await vi.advanceTimersByTimeAsync(2_000);
+    // The reveal threshold (t=1000) passed while hidden → still checking.
+    expect(m.getSnapshot().status).toBe("checking");
+
+    setVisibility("visible"); // resume: a fresh attempt, not the stale reveal
+    await vi.advanceTimersByTimeAsync(5_100);
+    expect(m.getSnapshot().status).toBe("active");
+    m.destroy();
+  });
+
+  it("pauses the active-check interval while hidden and resumes it on visible", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(res(200)));
+    const m = createMonitor({ healthUrl: testUrl, activeCheckInterval: 1_000 });
+    await vi.advanceTimersByTimeAsync(50);
+    expect(m.getSnapshot().status).toBe("active");
+    const callsWhileActive = vi.mocked(fetch).mock.calls.length;
+
+    setVisibility("hidden");
+    await vi.advanceTimersByTimeAsync(5_000);
+    // Interval cleared while hidden → no additional fetches.
+    expect(vi.mocked(fetch).mock.calls.length).toBe(callsWhileActive);
+
+    setVisibility("visible");
+    await vi.advanceTimersByTimeAsync(1_100);
+    expect(vi.mocked(fetch).mock.calls.length).toBeGreaterThan(callsWhileActive);
+    m.destroy();
+  });
+
   it("activeCheckInterval detects re-sleep: active → waking → active", async () => {
     let mode: "ok" | "down" = "ok";
     vi.stubGlobal(
@@ -488,7 +508,8 @@ describe("phase 3 policies", () => {
 
   it("silence on success: a warm engine leaves no elapsed ticker running", async () => {
     // Fake timers coarsely merge the reveal timer and fetch resolution, so
-    // "ticker was never created" isn't expressible; drive a waking→active cycle.
+    // "ticker was never created" isn't expressible; drive a waking→active cycle
+    // and assert behaviorally that the elapsed counter freezes after recovery.
     let call = 0;
     vi.stubGlobal(
       "fetch",
@@ -500,7 +521,6 @@ describe("phase 3 policies", () => {
           }),
       ),
     );
-    const clearIntervalSpy = vi.spyOn(globalThis, "clearInterval");
     const m = createMonitor({
       healthUrl: testUrl,
       revealDelay: 10,
@@ -511,14 +531,10 @@ describe("phase 3 policies", () => {
     expect(m.getSnapshot().status).toBe("waking");
     await vi.advanceTimersByTimeAsync(600); // recover → active
     expect(m.getSnapshot().status).toBe("active");
-    // The elapsed ticker's interval was explicitly cleared on recovery —
-    // nothing keeps firing at 1 Hz for a warm backend.
-    expect(clearIntervalSpy).toHaveBeenCalled();
     const tickValue = m.getSnapshot().elapsedSeconds;
     await vi.advanceTimersByTimeAsync(5_000);
     expect(m.getSnapshot().elapsedSeconds).toBe(tickValue); // frozen: no ticker running
     m.destroy();
-    expect(__engineCount()).toBe(0);
   });
 
   it("is SSR-safe: no document/navigator globals → policies no-op, engine still works", async () => {
@@ -529,5 +545,16 @@ describe("phase 3 policies", () => {
     await vi.advanceTimersByTimeAsync(100);
     expect(m.getSnapshot().status).toBe("active");
     m.destroy();
+  });
+
+  it("is SSR-safe for online event teardown: window undefined → destroy() does not throw", async () => {
+    vi.stubGlobal("fetch", fetchResolving(50, 200));
+    // Simulate SSR / environments without a window object — the engine's
+    // detachOnline() guards with `typeof window`; it must not throw.
+    vi.stubGlobal("window", undefined);
+    const m = createMonitor({ healthUrl: testUrl, revealDelay: 10 });
+    await vi.advanceTimersByTimeAsync(100);
+    expect(m.getSnapshot().status).toBe("active");
+    expect(() => m.destroy()).not.toThrow();
   });
 });

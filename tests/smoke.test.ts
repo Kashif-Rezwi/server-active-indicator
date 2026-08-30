@@ -1,8 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import { DEFAULT_CONFIG, createMonitor } from "../src/index";
+import { DEFAULT_CONFIG } from "../src/index";
 import { ServerStatus, ServerStatusProvider, useServerStatus } from "../src/react/index";
 
+/**
+ * Barrel smoke: the named imports above are themselves the resolution assertion
+ * (ESM import throws on a missing export) — behavior is covered by the dedicated
+ * suites. The only value-add here is pinning the locked defaults verbatim, since
+ * they are a published contract (AGENTS.md locked decisions).
+ */
 describe("package entries", () => {
   it("core entry exposes the locked defaults", () => {
     expect(DEFAULT_CONFIG).toEqual({
@@ -10,7 +16,6 @@ describe("package entries", () => {
       revealDelay: 3_000,
       pollInterval: 5_000,
       offlineAfter: 60_000,
-      successDisplayMs: 2_500,
       activeCheckInterval: 0,
       pauseWhenHidden: true,
       backoffFactor: 1.5,
@@ -18,17 +23,11 @@ describe("package entries", () => {
     });
   });
 
-  it("core entry exposes createMonitor (implemented in Phase 2)", () => {
-    expect(typeof createMonitor).toBe("function");
-    // Requires a check source; validated for real in tests/monitor.test.ts.
-    expect(() => createMonitor({})).toThrow(/healthUrl.*check/);
-  });
-
-  it("react entry exposes the public API (hook + provider + default UI)", () => {
-    expect(typeof useServerStatus).toBe("function");
-    expect(typeof ServerStatusProvider).toBe("function");
-    expect(typeof ServerStatus).toBe("function");
-    // Behavior is covered by tests/use-server-status.test.tsx and
-    // tests/server-status.test.tsx under React Testing Library.
+  it("react entry exposes hook, provider, and default UI", () => {
+    // Existence-only by design: any deeper assertion here would duplicate the
+    // behavior suites; a barrel smoke proves "the export is there".
+    expect(useServerStatus).toBeDefined();
+    expect(ServerStatusProvider).toBeDefined();
+    expect(ServerStatus).toBeDefined();
   });
 });

@@ -5,33 +5,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { __engineCount } from "../src/core/registry";
 import { ServerStatus, ServerStatusProvider } from "../src/react/index";
 import { STYLES } from "../src/react/styles";
+import { HEALTH_URL, fetchRejecting, fetchResolving, pinJitter, res } from "./helpers";
 
-const URL = "https://api.example.com/health";
 const STYLE_ID = "server-active-indicator-styles";
-
-function res(status: number, ok = status >= 200 && status < 300) {
-  return { ok, status } as Response;
-}
-
-/** A fetch mock that resolves after `ms` with the given status. */
-function fetchResolving(ms: number, status: number) {
-  return vi.fn(
-    () =>
-      new Promise<Response>((resolve) => {
-        setTimeout(() => resolve(res(status)), ms);
-      }),
-  );
-}
-
-/** A fetch mock that rejects after `ms` (network/CORS/DNS failure). */
-function fetchRejecting(ms: number) {
-  return vi.fn(
-    () =>
-      new Promise<Response>((_resolve, reject) => {
-        setTimeout(() => reject(new TypeError("fetch failed")), ms);
-      }),
-  );
-}
 
 function styleTags(): HTMLElement[] {
   return Array.from(document.querySelectorAll(`style#${STYLE_ID}`));
@@ -40,12 +16,9 @@ function styleTags(): HTMLElement[] {
 describe("ServerStatus — default UI", () => {
   beforeEach(() => {
     vi.useFakeTimers();
-    // Deterministic jitter: 0.8 + 0.5 * 0.4 = 1.0 exactly.
-    vi.spyOn(Math, "random").mockReturnValue(0.5);
+    pinJitter();
   });
   afterEach(() => {
-    vi.restoreAllMocks();
-    vi.unstubAllGlobals();
     vi.useRealTimers();
     // Start every test without the injected stylesheet.
     styleTags().forEach((el) => el.remove());
@@ -53,7 +26,7 @@ describe("ServerStatus — default UI", () => {
 
   it("renders nothing on a warm backend (silence on success)", async () => {
     vi.stubGlobal("fetch", fetchResolving(50, 200));
-    const { container } = render(<ServerStatus healthUrl={URL} />);
+    const { container } = render(<ServerStatus healthUrl={HEALTH_URL} />);
     expect(container.querySelector(".sai-banner")).toBeNull(); // first commit: unknown
     expect(screen.queryByRole("status")).toBeNull();
 
@@ -65,7 +38,7 @@ describe("ServerStatus — default UI", () => {
 
   it("shows the waking banner with locked copy, a live region, and the counter", async () => {
     vi.stubGlobal("fetch", fetchRejecting(20));
-    render(<ServerStatus healthUrl={URL} revealDelay={30} offlineAfter={600_000} />);
+    render(<ServerStatus healthUrl={HEALTH_URL} revealDelay={30} offlineAfter={600_000} />);
     expect(screen.queryByRole("status")).toBeNull(); // checking is silent
 
     await act(async () => {
@@ -89,7 +62,7 @@ describe("ServerStatus — default UI", () => {
 
   it("ticks the elapsed counter and switches to the Mm Ss format past 60s", async () => {
     vi.stubGlobal("fetch", fetchRejecting(20));
-    render(<ServerStatus healthUrl={URL} revealDelay={30} offlineAfter={600_000} />);
+    render(<ServerStatus healthUrl={HEALTH_URL} revealDelay={30} offlineAfter={600_000} />);
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(40);
@@ -99,19 +72,18 @@ describe("ServerStatus — default UI", () => {
       screen.getByRole("status").querySelector(".sai-elapsed")?.textContent ?? "";
     expect(readTime()).toBe("0s");
 
-    // After ~3s the ticker has fired at least once; exact value depends on
-    // microtask flushing — accept any single-digit seconds reading.
+    // Ticker created at the first failure (t=20), 1 Hz: at t=3040 three ticks
+    // have fired → floor((3040 - 20) / 1000) = 3.
     await act(async () => {
       await vi.advanceTimersByTimeAsync(3_000);
     });
-    expect(readTime()).toMatch(/^[1-9]s$/);
+    expect(readTime()).toBe("3s");
 
-    // Cross a minute. The episode clock starts at the first attempt's resolution
-    // (t=20); accept the one-second boundary depending on exact tick alignment.
+    // At t=61040 the episode (clock started at t=20) is 61s old → Mm Ss format.
     await act(async () => {
       await vi.advanceTimersByTimeAsync(58_000);
     });
-    expect(readTime()).toMatch(/^1m [01]s$/);
+    expect(readTime()).toBe("1m 1s");
   });
 
   it("shows the ready confirmation after a cold start and auto-hides it", async () => {
@@ -128,7 +100,7 @@ describe("ServerStatus — default UI", () => {
     );
     render(
       <ServerStatus
-        healthUrl={URL}
+        healthUrl={HEALTH_URL}
         revealDelay={30}
         pollInterval={5_000}
         backoffFactor={1}
@@ -175,7 +147,7 @@ describe("ServerStatus — default UI", () => {
     );
     render(
       <ServerStatus
-        healthUrl={URL}
+        healthUrl={HEALTH_URL}
         revealDelay={30}
         pollInterval={5_000}
         backoffFactor={1}
@@ -226,7 +198,7 @@ describe("ServerStatus — default UI", () => {
     );
     const first = render(
       <ServerStatus
-        healthUrl={URL}
+        healthUrl={HEALTH_URL}
         revealDelay={30}
         pollInterval={5_000}
         backoffFactor={1}
@@ -245,7 +217,7 @@ describe("ServerStatus — default UI", () => {
     // suppresses the confirmation.
     const second = render(
       <ServerStatus
-        healthUrl={URL}
+        healthUrl={HEALTH_URL}
         revealDelay={30}
         pollInterval={5_000}
         backoffFactor={1}
@@ -260,7 +232,7 @@ describe("ServerStatus — default UI", () => {
   it("shows the offline banner with a working Retry button", async () => {
     const fetchMock = vi.fn(() => Promise.resolve(res(404))); // → fast-path offline (http-error)
     vi.stubGlobal("fetch", fetchMock);
-    render(<ServerStatus healthUrl={URL} />);
+    render(<ServerStatus healthUrl={HEALTH_URL} />);
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(20);
@@ -283,7 +255,7 @@ describe("ServerStatus — default UI", () => {
   it("shows the browser-offline message when the browser itself is offline", async () => {
     const onLine = vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
     vi.stubGlobal("fetch", fetchResolving(20, 200));
-    render(<ServerStatus healthUrl={URL} revealDelay={30} />);
+    render(<ServerStatus healthUrl={HEALTH_URL} revealDelay={30} />);
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(40);
@@ -300,7 +272,7 @@ describe("ServerStatus — default UI", () => {
     vi.stubGlobal("fetch", fetchRejecting(20));
     render(
       <ServerStatus
-        healthUrl={URL}
+        healthUrl={HEALTH_URL}
         revealDelay={30}
         variant="pill"
         className="my-indicator"
@@ -322,7 +294,7 @@ describe("ServerStatus — default UI", () => {
     vi.stubGlobal("fetch", fetchRejecting(20));
     const { unmount: unmountA } = render(
       <ServerStatus
-        healthUrl={URL}
+        healthUrl={HEALTH_URL}
         revealDelay={30}
         offlineAfter={600_000}
         messages={{ waking: "Le serveur démarre…" }}
@@ -342,7 +314,7 @@ describe("ServerStatus — default UI", () => {
     );
     render(
       <ServerStatus
-        healthUrl={URL}
+        healthUrl={HEALTH_URL}
         messages={{ offline: "Serveur indisponible.", retry: "Réessayer" }}
       />,
     );
@@ -359,7 +331,7 @@ describe("ServerStatus — default UI", () => {
     vi.stubGlobal("fetch", fetchRejecting(20));
     const seen: string[] = [];
     const { container } = render(
-      <ServerStatus healthUrl={URL} revealDelay={30} offlineAfter={600_000}>
+      <ServerStatus healthUrl={HEALTH_URL} revealDelay={30} offlineAfter={600_000}>
         {(s) => {
           seen.push(s.status);
           return s.status === "waking" ? <i data-testid="rp">custom {s.elapsedSeconds}</i> : null;
@@ -380,12 +352,12 @@ describe("ServerStatus — default UI", () => {
 
   it("injects exactly one stylesheet with sai- rules, 320px-safety, and motion/color tokens", async () => {
     vi.stubGlobal("fetch", fetchRejecting(20));
-    const first = render(<ServerStatus healthUrl={URL} revealDelay={30} />);
-    const second = render(<ServerStatus healthUrl={URL} revealDelay={30} />);
+    const first = render(<ServerStatus healthUrl={HEALTH_URL} revealDelay={30} />);
+    const second = render(<ServerStatus healthUrl={HEALTH_URL} revealDelay={30} />);
     await act(async () => {
       await vi.advanceTimersByTimeAsync(40);
     });
-    const third = render(<ServerStatus healthUrl={URL} revealDelay={30} />);
+    const third = render(<ServerStatus healthUrl={HEALTH_URL} revealDelay={30} />);
     third.unmount();
     expect(styleTags().length).toBe(1);
 
@@ -414,7 +386,7 @@ describe("ServerStatus — default UI", () => {
   it("uses the provider's monitor when no check source is on the props", async () => {
     vi.stubGlobal("fetch", fetchRejecting(20));
     render(
-      <ServerStatusProvider healthUrl={URL} revealDelay={30} offlineAfter={600_000}>
+      <ServerStatusProvider healthUrl={HEALTH_URL} revealDelay={30} offlineAfter={600_000}>
         <ServerStatus />
       </ServerStatusProvider>,
     );
@@ -427,7 +399,7 @@ describe("ServerStatus — default UI", () => {
 
   it("creates exactly one engine for its own config and destroys it on unmount", async () => {
     vi.stubGlobal("fetch", fetchResolving(20, 200));
-    const { unmount } = render(<ServerStatus healthUrl={URL} />);
+    const { unmount } = render(<ServerStatus healthUrl={HEALTH_URL} />);
     await act(async () => {
       await vi.advanceTimersByTimeAsync(40);
     });
@@ -446,7 +418,7 @@ describe("ServerStatus — default UI", () => {
   it("releases its engine on unmount mid-waking", async () => {
     vi.stubGlobal("fetch", fetchRejecting(20));
     const { unmount } = render(
-      <ServerStatus healthUrl={URL} revealDelay={30} offlineAfter={600_000} />,
+      <ServerStatus healthUrl={HEALTH_URL} revealDelay={30} offlineAfter={600_000} />,
     );
     await act(async () => {
       await vi.advanceTimersByTimeAsync(40);
@@ -457,6 +429,39 @@ describe("ServerStatus — default UI", () => {
     expect(__engineCount()).toBe(0);
     expect(screen.queryByRole("status")).toBeNull();
   });
+
+  it("render-prop children receives a refresh function that triggers a re-check", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockRejectedValueOnce(new TypeError("down")) // first attempt: fail → waking
+      .mockResolvedValue(res(200)); // subsequent: succeed
+    vi.stubGlobal("fetch", fetchMock);
+
+    const refreshFnRef: { current: (() => void) | null } = { current: null };
+    render(
+      <ServerStatus healthUrl={HEALTH_URL} revealDelay={30} pollInterval={5_000} backoffFactor={1}>
+        {(snapshot) => {
+          refreshFnRef.current = snapshot.refresh;
+          return <span data-testid="rp-state">{snapshot.status}</span>;
+        }}
+      </ServerStatus>,
+    );
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(40);
+    }); // waking
+    expect(screen.getByTestId("rp-state").textContent).toBe("waking");
+
+    const callsBefore = fetchMock.mock.calls.length;
+    await act(async () => {
+      refreshFnRef.current?.(); // trigger re-check via the render prop's refresh
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(40);
+    });
+    expect(fetchMock.mock.calls.length).toBeGreaterThan(callsBefore);
+    expect(screen.getByTestId("rp-state").textContent).toBe("active");
+  });
 });
 
 describe("ServerStatus — accessibility (axe-core)", () => {
@@ -465,8 +470,6 @@ describe("ServerStatus — accessibility (axe-core)", () => {
     document.documentElement.lang = "en";
   });
   afterEach(() => {
-    vi.unstubAllGlobals();
-    vi.restoreAllMocks();
     styleTags().forEach((el) => el.remove());
   });
 
@@ -481,7 +484,9 @@ describe("ServerStatus — accessibility (axe-core)", () => {
     const { container } = render(
       <ServerStatus check={() => new Promise<boolean>(() => {})} revealDelay={30} />,
     );
-    await waitFor(() => expect(screen.getByRole("status")).toBeTruthy());
+    await waitFor(() =>
+      expect(screen.getByRole("status").getAttribute("data-state")).toBe("waking"),
+    );
     await assertNoViolations(container);
   }, 30_000);
 
@@ -510,7 +515,9 @@ describe("ServerStatus — accessibility (axe-core)", () => {
     const { container } = render(
       <ServerStatus check={async () => ({ ok: false, reason: "http-error", status: 404 })} />,
     );
-    await waitFor(() => expect(screen.getByRole("button", { name: "Retry" })).toBeTruthy());
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Retry" }).textContent).toBe("Retry"),
+    );
     await assertNoViolations(container);
   }, 30_000);
 
@@ -528,7 +535,9 @@ describe("ServerStatus — accessibility (axe-core)", () => {
     const { container } = render(
       <ServerStatus variant="pill" check={() => new Promise<boolean>(() => {})} revealDelay={30} />,
     );
-    await waitFor(() => expect(screen.getByRole("status")).toBeTruthy());
+    await waitFor(() =>
+      expect(screen.getByRole("status").getAttribute("data-state")).toBe("waking"),
+    );
     await assertNoViolations(container);
   }, 30_000);
 });

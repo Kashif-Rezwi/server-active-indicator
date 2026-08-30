@@ -6,7 +6,6 @@ export const DEFAULT_CONFIG = {
   revealDelay: 3_000,
   pollInterval: 5_000,
   offlineAfter: 60_000,
-  successDisplayMs: 2_500,
   activeCheckInterval: 0,
   pauseWhenHidden: true,
   backoffFactor: 1.5,
@@ -18,7 +17,6 @@ export const DEFAULT_CONFIG = {
     | "revealDelay"
     | "pollInterval"
     | "offlineAfter"
-    | "successDisplayMs"
     | "activeCheckInterval"
     | "pauseWhenHidden"
     | "backoffFactor"

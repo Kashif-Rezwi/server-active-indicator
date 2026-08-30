@@ -5,48 +5,21 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { __engineCount } from "../src/core/registry";
 import { ServerStatusProvider, useServerStatus } from "../src/react/index";
+import { HEALTH_URL, fetchRejecting, fetchResolving, pinJitter, res } from "./helpers";
 
-const URL = "https://api.example.com/health";
 const OTHER_URL = "https://other.example.com/health";
 
-function res(status: number, ok = status >= 200 && status < 300) {
-  return { ok, status } as Response;
-}
-
-/** A fetch mock that resolves after `ms` with the given status. */
-function fetchResolving(ms: number, status: number) {
-  return vi.fn(
-    () =>
-      new Promise<Response>((resolve) => {
-        setTimeout(() => resolve(res(status)), ms);
-      }),
-  );
-}
-
-/** A fetch mock that rejects after `ms` (network/CORS/DNS failure). */
-function fetchRejecting(ms: number) {
-  return vi.fn(
-    () =>
-      new Promise<Response>((_resolve, reject) => {
-        setTimeout(() => reject(new TypeError("fetch failed")), ms);
-      }),
-  );
-}
-
-/** Wrapper that mounts the hook inside a provider configured for `URL`. */
+/** Wrapper that mounts the hook inside a provider configured for the shared HEALTH_URL. */
 function ProviderWrapper({ children }: { children: ReactNode }) {
-  return <ServerStatusProvider healthUrl={URL}>{children}</ServerStatusProvider>;
+  return <ServerStatusProvider healthUrl={HEALTH_URL}>{children}</ServerStatusProvider>;
 }
 
 describe("useServerStatus", () => {
   beforeEach(() => {
     vi.useFakeTimers();
-    // Deterministic jitter: 0.8 + 0.5 * 0.4 = 1.0 exactly.
-    vi.spyOn(Math, "random").mockReturnValue(0.5);
+    pinJitter();
   });
   afterEach(() => {
-    vi.restoreAllMocks();
-    vi.unstubAllGlobals();
     vi.useRealTimers();
   });
 
@@ -58,7 +31,7 @@ describe("useServerStatus", () => {
     vi.stubGlobal("fetch", fetchResolving(50, 200));
     const statuses: string[] = [];
     const { result } = renderHook(() => {
-      const status = useServerStatus({ healthUrl: URL });
+      const status = useServerStatus({ healthUrl: HEALTH_URL });
       statuses.push(status.status);
       return status;
     });
@@ -89,7 +62,12 @@ describe("useServerStatus", () => {
       ),
     );
     const { result } = renderHook(() =>
-      useServerStatus({ healthUrl: URL, revealDelay: 10, pollInterval: 5_000, backoffFactor: 1 }),
+      useServerStatus({
+        healthUrl: HEALTH_URL,
+        revealDelay: 10,
+        pollInterval: 5_000,
+        backoffFactor: 1,
+      }),
     );
 
     await act(async () => {
@@ -113,7 +91,7 @@ describe("useServerStatus", () => {
 
   it("refresh() triggers an immediate re-check", async () => {
     vi.stubGlobal("fetch", fetchResolving(50, 200));
-    const { result } = renderHook(() => useServerStatus({ healthUrl: URL }));
+    const { result } = renderHook(() => useServerStatus({ healthUrl: HEALTH_URL }));
     await act(async () => {
       await vi.advanceTimersByTimeAsync(60);
     });
@@ -136,7 +114,7 @@ describe("useServerStatus", () => {
   it("destroys the engine on unmount and stops checking", async () => {
     const fetchMock = fetchResolving(50, 200);
     vi.stubGlobal("fetch", fetchMock);
-    const { result, unmount } = renderHook(() => useServerStatus({ healthUrl: URL }));
+    const { result, unmount } = renderHook(() => useServerStatus({ healthUrl: HEALTH_URL }));
     await act(async () => {
       await vi.advanceTimersByTimeAsync(60);
     });
@@ -156,8 +134,8 @@ describe("useServerStatus", () => {
   it("two hooks with identical config share one engine and one health loop", async () => {
     const fetchMock = fetchResolving(50, 200);
     vi.stubGlobal("fetch", fetchMock);
-    const first = renderHook(() => useServerStatus({ healthUrl: URL }));
-    const second = renderHook(() => useServerStatus({ healthUrl: URL }));
+    const first = renderHook(() => useServerStatus({ healthUrl: HEALTH_URL }));
+    const second = renderHook(() => useServerStatus({ healthUrl: HEALTH_URL }));
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(60);
@@ -168,10 +146,37 @@ describe("useServerStatus", () => {
     expect(second.result.current.status).toBe("active");
   });
 
+  it("captures options on mount: rerendering with different options keeps the same engine", async () => {
+    const fetchMock = fetchResolving(50, 200);
+    vi.stubGlobal("fetch", fetchMock);
+    const { result, rerender } = renderHook(
+      ({ url }: { url: string }) => useServerStatus({ healthUrl: url }),
+      { initialProps: { url: HEALTH_URL } },
+    );
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(60);
+    });
+    expect(result.current.status).toBe("active");
+    expect(__engineCount()).toBe(1);
+
+    // Capture-on-mount is a documented contract: live reconfiguration must not
+    // tear down and recreate the engine mid-episode (it keys the registry).
+    rerender({ url: OTHER_URL });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(100);
+    });
+    expect(__engineCount()).toBe(1);
+    // Every attempt still went to the mount-time URL — no reconfiguration.
+    expect(fetchMock.mock.calls.length).toBeGreaterThan(0);
+    const calls = fetchMock.mock.calls as unknown as Array<[string, unknown]>;
+    expect(calls.every(([url]) => url === HEALTH_URL)).toBe(true);
+    expect(result.current.status).toBe("active");
+  });
+
   it("StrictMode (warm): one engine after mount, silent while active, none after unmount", async () => {
     const fetchMock = fetchResolving(50, 200);
     vi.stubGlobal("fetch", fetchMock);
-    const { result, unmount } = renderHook(() => useServerStatus({ healthUrl: URL }), {
+    const { result, unmount } = renderHook(() => useServerStatus({ healthUrl: HEALTH_URL }), {
       wrapper: StrictMode,
     });
 
@@ -198,7 +203,7 @@ describe("useServerStatus", () => {
     const { result, unmount } = renderHook(
       () =>
         useServerStatus({
-          healthUrl: URL,
+          healthUrl: HEALTH_URL,
           revealDelay: 10,
           pollInterval: 5_000,
           backoffFactor: 1,
@@ -228,11 +233,9 @@ describe("useServerStatus", () => {
 describe("ServerStatusProvider", () => {
   beforeEach(() => {
     vi.useFakeTimers();
-    vi.spyOn(Math, "random").mockReturnValue(0.5);
+    pinJitter();
   });
   afterEach(() => {
-    vi.restoreAllMocks();
-    vi.unstubAllGlobals();
     vi.useRealTimers();
   });
 
@@ -274,7 +277,7 @@ describe("ServerStatusProvider", () => {
   it("options matching the provider config share its engine (registry dedup)", async () => {
     const fetchMock = fetchResolving(50, 200);
     vi.stubGlobal("fetch", fetchMock);
-    const { result } = renderHook(() => useServerStatus({ healthUrl: URL }), {
+    const { result } = renderHook(() => useServerStatus({ healthUrl: HEALTH_URL }), {
       wrapper: ProviderWrapper,
     });
     await act(async () => {
@@ -291,7 +294,7 @@ describe("ServerStatusProvider", () => {
     const { result, unmount } = renderHook(() => useServerStatus(), {
       wrapper: ({ children }: { children: ReactNode }) => (
         <StrictMode>
-          <ServerStatusProvider healthUrl={URL} pollInterval={5_000} backoffFactor={1}>
+          <ServerStatusProvider healthUrl={HEALTH_URL} pollInterval={5_000} backoffFactor={1}>
             {children}
           </ServerStatusProvider>
         </StrictMode>
