@@ -23,16 +23,16 @@ export const STYLES = `
 }
 @media (prefers-color-scheme: dark) {
   :where(:root) {
-    --sai-waking-bg: rgba(120, 53, 15, 0.35);
-    --sai-waking-border: rgba(251, 191, 36, 0.25);
+    --sai-waking-bg: rgba(120, 53, 15, 0.55);
+    --sai-waking-border: rgba(251, 191, 36, 0.35);
     --sai-waking-text: #fcd34d;
     --sai-waking-accent: #fbbf24;
-    --sai-active-bg: rgba(20, 83, 45, 0.35);
-    --sai-active-border: rgba(74, 222, 128, 0.25);
+    --sai-active-bg: rgba(20, 83, 45, 0.55);
+    --sai-active-border: rgba(74, 222, 128, 0.35);
     --sai-active-text: #86efac;
     --sai-active-accent: #4ade80;
-    --sai-offline-bg: rgba(127, 29, 29, 0.35);
-    --sai-offline-border: rgba(248, 113, 113, 0.25);
+    --sai-offline-bg: rgba(127, 29, 29, 0.55);
+    --sai-offline-border: rgba(248, 113, 113, 0.35);
     --sai-offline-text: #fca5a5;
     --sai-offline-accent: #f87171;
   }
@@ -90,6 +90,7 @@ export const STYLES = `
 }
 .sai-icon {
   flex-shrink: 0;
+  vertical-align: middle;
   color: var(--sai-icon-color, currentColor);
 }
 .sai-spinner {
