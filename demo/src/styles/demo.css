@@ -301,6 +301,11 @@ body {
   color: var(--brand-400);
 }
 
+/* Short brand alias — swapped in for the full name on compact headers */
+.brand-name-short {
+  display: none;
+}
+
 .header-actions {
   display: flex;
   align-items: center;
@@ -417,10 +422,15 @@ body {
   }
 }
 
-/* Tablet: compact header brand, install pill loses the command text */
+/* Tablet: compact header — short brand alias keeps the version badge visible
+   even on ~320-375px viewports ("sai v0.3.x" fits where the full name can't) */
 @media (max-width: 700px) {
-  .brand-title {
-    font-size: 13.5px;
+  .brand-name-full {
+    display: none;
+  }
+
+  .brand-name-short {
+    display: inline;
   }
 
   .install-cmd-pill {
@@ -437,13 +447,6 @@ body {
     left: auto;
     right: 0;
     transform: none;
-  }
-}
-
-/* Phone: hide version badge so the header fits ~320-375px viewports */
-@media (max-width: 420px) {
-  .brand-badge {
-    display: none;
   }
 }
 
