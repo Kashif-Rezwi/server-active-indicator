@@ -1,8 +1,10 @@
 import { useState } from "react";
-import { CheckIcon, CopyIcon, GitHubIcon, NpmIcon } from "./Icons";
+import { useTheme } from "../hooks/useTheme";
+import { CheckIcon, CopyIcon, GitHubIcon, MoonIcon, NpmIcon, SunIcon } from "./Icons";
 
 export function HeaderNav() {
   const [copied, setCopied] = useState(false);
+  const { theme, toggleTheme } = useTheme();
 
   const handleCopyInstall = async () => {
     await navigator.clipboard.writeText("npm i server-active-indicator");
@@ -55,6 +57,18 @@ export function HeaderNav() {
             <code className="install-cmd-code">npm i server-active-indicator</code>
             <span className="install-cmd-icon">{copied ? <CheckIcon /> : <CopyIcon />}</span>
             {copied && <span className="install-copied-tooltip">Copied!</span>}
+          </button>
+
+          {/* Light/Dark theme toggle */}
+          <button
+            type="button"
+            className="header-icon-link"
+            onClick={toggleTheme}
+            title={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+            aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+            aria-pressed={theme === "light"}
+          >
+            {theme === "dark" ? <SunIcon /> : <MoonIcon />}
           </button>
 
           {/* Icon-only social/external links without background or text labels */}

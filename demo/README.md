@@ -21,6 +21,8 @@ This demo showcases a realistic SaaS analytics dashboard (**"Pulse"**) powered b
   - Live `MonitorSnapshot` state inspector
   - Real-time transition event stream log
   - Instant copyable React and Vanilla JS code snippet generator
+- **Dark / Light Theme**: Toggle in the header (sun/moon button). The choice is persisted to `localStorage` and defaults to your OS `prefers-color-scheme`. The indicator's default UI follows the in-page toggle too — the demo pins the library's `--sai-*` custom properties to its `data-theme`, so no library changes were needed.
+- **Fully Responsive**: Single-column layout below 1100px, a compressed header (icon-only install pill, hidden version badge) on phones, horizontally scrollable code tabs, and a full-width floating indicator on small screens. Verified down to 375px viewports with no horizontal overflow.
 
 ## Running Locally
 

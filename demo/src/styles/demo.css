@@ -1,4 +1,6 @@
 :root {
+  color-scheme: dark;
+
   --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
@@ -17,9 +19,23 @@
   --bg-surface-raised: #141f36;
   --bg-surface-hover: #1b2a4a;
   --bg-card: rgba(14, 21, 38, 0.9);
+  --bg-header: rgba(8, 12, 20, 0.88);
+
+  /* Neutral tints (light overlays) & darkening overlays, theme-aware */
+  --tint-1: rgba(255, 255, 255, 0.015);
+  --tint-2: rgba(255, 255, 255, 0.02);
+  --tint-3: rgba(255, 255, 255, 0.03);
+  --tint-4: rgba(255, 255, 255, 0.04);
+  --tint-5: rgba(255, 255, 255, 0.08);
+  --tint-6: rgba(255, 255, 255, 0.1);
+  --tint-7: rgba(255, 255, 255, 0.12);
+  --overlay-1: rgba(0, 0, 0, 0.12);
+  --overlay-2: rgba(0, 0, 0, 0.2);
+  --overlay-3: rgba(0, 0, 0, 0.3);
+  --surface-open: rgba(14, 20, 32, 0.45);
 
   /* Borders */
-  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-subtle: var(--tint-5);
   --border-medium: rgba(255, 255, 255, 0.16);
   --border-active: rgba(99, 102, 241, 0.6);
 
@@ -56,9 +72,108 @@
   --shadow-md: 0 4px 16px -2px rgba(0, 0, 0, 0.4);
   --shadow-lg: 0 12px 32px -4px rgba(0, 0, 0, 0.55);
   --shadow-glow: 0 0 24px var(--brand-glow);
+
+  /* Code snippet surface & syntax-highlight palette */
+  --code-bg: #050810;
+  --code-keyword: #c084fc;
+  --code-string: #86efac;
+  --code-tag: #60a5fa;
+  --code-comment: #64748b;
 }
 
+/* Light theme overrides (dark is the demo's default identity) */
+:root[data-theme="light"] {
+  color-scheme: light;
 
+  --bg-app: #f5f6fa;
+  --bg-surface: #ffffff;
+  --bg-surface-raised: #eef1f7;
+  --bg-surface-hover: #e4e8f2;
+  --bg-card: rgba(255, 255, 255, 0.92);
+  --bg-header: rgba(245, 246, 250, 0.85);
+
+  --tint-1: rgba(15, 23, 42, 0.015);
+  --tint-2: rgba(15, 23, 42, 0.025);
+  --tint-3: rgba(15, 23, 42, 0.04);
+  --tint-4: rgba(15, 23, 42, 0.05);
+  --tint-5: rgba(15, 23, 42, 0.12);
+  --tint-6: rgba(15, 23, 42, 0.14);
+  --tint-7: rgba(15, 23, 42, 0.18);
+  --overlay-1: rgba(15, 23, 42, 0.045);
+  --overlay-2: rgba(15, 23, 42, 0.035);
+  --overlay-3: rgba(15, 23, 42, 0.05);
+  --surface-open: rgba(99, 102, 241, 0.035);
+
+  --border-subtle: rgba(15, 23, 42, 0.09);
+  --border-medium: rgba(15, 23, 42, 0.16);
+  --border-active: rgba(79, 70, 229, 0.55);
+
+  --text-primary: #1e293b;
+  --text-secondary: #475569;
+  --text-muted: #5d6b7e;
+  --text-inverse: #f8fafc;
+
+  --brand-500: #6366f1;
+  --brand-400: #4f46e5;
+  --brand-600: #4338ca;
+  --brand-glow: rgba(99, 102, 241, 0.16);
+
+  --color-success: #059669;
+  --color-success-bg: rgba(5, 150, 105, 0.1);
+  --color-warning: #d97706;
+  --color-warning-bg: rgba(217, 119, 6, 0.1);
+  --color-danger: #e11d48;
+  --color-danger-bg: rgba(225, 29, 72, 0.09);
+  --color-cold: #0284c7;
+  --color-cold-bg: rgba(2, 132, 199, 0.1);
+
+  --shadow-sm: 0 1px 2px 0 rgba(15, 23, 42, 0.08);
+  --shadow-md: 0 4px 16px -2px rgba(15, 23, 42, 0.1);
+  --shadow-lg: 0 12px 32px -4px rgba(15, 23, 42, 0.16);
+
+  --code-bg: #f8fafc;
+  --code-keyword: #7c3aed;
+  --code-string: #15803d;
+  --code-tag: #2563eb;
+  --code-comment: #94a3b8;
+}
+
+/*
+ * Pin the library's `--sai-*` custom properties to the demo's manual theme so
+ * the default <ServerStatus> UI follows the in-page toggle instead of only the
+ * OS `prefers-color-scheme`. The library declares its values with zero
+ * specificity via `:where(:root)`, so these demo rules always win. Values mirror
+ * the library defaults exactly (src/react/styles.ts).
+ */
+:root[data-theme="dark"] {
+  --sai-waking-bg: #3d1f00;
+  --sai-waking-border: #92400e;
+  --sai-waking-text: #fcd34d;
+  --sai-waking-accent: #fbbf24;
+  --sai-active-bg: #052e16;
+  --sai-active-border: #166534;
+  --sai-active-text: #86efac;
+  --sai-active-accent: #4ade80;
+  --sai-offline-bg: #3b0d0d;
+  --sai-offline-border: #7f1d1d;
+  --sai-offline-text: #fca5a5;
+  --sai-offline-accent: #f87171;
+}
+
+:root[data-theme="light"] {
+  --sai-waking-bg: #fef3c7;
+  --sai-waking-border: #f3d9a4;
+  --sai-waking-text: #92400e;
+  --sai-waking-accent: #b45309;
+  --sai-active-bg: #dcfce7;
+  --sai-active-border: #b9e6cb;
+  --sai-active-text: #14532d;
+  --sai-active-accent: #15803d;
+  --sai-offline-bg: #fee2e2;
+  --sai-offline-border: #f6c6c6;
+  --sai-offline-text: #7f1d1d;
+  --sai-offline-accent: #b91c1c;
+}
 
 * {
   box-sizing: border-box;
@@ -114,7 +229,7 @@ body {
   width: 100%;
   height: 56px;
   z-index: 100;
-  background: rgba(8, 12, 20, 0.88);
+  background: var(--bg-header);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border-bottom: 1px solid var(--border-subtle);
@@ -261,7 +376,7 @@ body {
 
 .header-icon-link:hover {
   color: var(--text-primary);
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--tint-4);
 }
 
 /* Standard Main Grid (Left side: 1fr; Right sidebar: 380px normal width) */
@@ -288,12 +403,49 @@ body {
   }
 }
 
+/* Tablet: compact header brand, install pill loses the command text */
+@media (max-width: 700px) {
+  .brand-title {
+    font-size: 13.5px;
+  }
+
+  .install-cmd-pill {
+    padding: 0 8px;
+    gap: 0;
+  }
+
+  .install-cmd-prefix,
+  .install-cmd-code {
+    display: none;
+  }
+
+  .install-copied-tooltip {
+    left: auto;
+    right: 0;
+    transform: none;
+  }
+}
+
+/* Phone: hide version badge so the header fits ~320-375px viewports */
+@media (max-width: 420px) {
+  .brand-badge {
+    display: none;
+  }
+}
+
 .app-shell-container,
 .demo-sidebar,
 .control-panel-stack {
   display: flex;
   flex-direction: column;
   gap: var(--space-5);
+}
+
+/* Grid/flex children default to min-width: auto, which lets wide content
+   (e.g. code tabs) blow out the 1fr tracks on narrow screens */
+.app-shell-container,
+.demo-sidebar {
+  min-width: 0;
 }
 
 /* Indicator Slots */
@@ -338,6 +490,16 @@ body {
   animation: slide-up 0.25s ease;
 }
 
+/* Phone: the floating banner spans the viewport width instead of overflowing it */
+@media (max-width: 600px) {
+  .indicator-slot-floating {
+    left: var(--space-4);
+    right: var(--space-4);
+    bottom: var(--space-4);
+    max-width: none;
+  }
+}
+
 @keyframes slide-down {
   from {
     opacity: 0;
@@ -377,12 +539,12 @@ body {
 
 .control-card:hover,
 .mock-app-card:hover {
-  border-color: rgba(255, 255, 255, 0.12);
+  border-color: var(--tint-7);
 }
 
 .card-title-bar {
   padding: var(--space-3) var(--space-4);
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--overlay-2);
   border-bottom: 1px solid var(--border-subtle);
   display: flex;
   align-items: center;
@@ -461,7 +623,7 @@ body {
   flex-wrap: wrap;
   gap: var(--space-2);
   padding: var(--space-3) var(--space-4);
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--overlay-2);
   border-bottom: 1px solid var(--border-subtle);
   min-height: 48px;
 }
@@ -919,7 +1081,7 @@ body {
 .inspector-window {
   display: flex;
   flex-direction: column;
-  background: rgba(0, 0, 0, 0.3);
+  background: var(--overlay-3);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-sm);
   overflow: hidden;
@@ -931,7 +1093,7 @@ body {
   align-items: center;
   justify-content: space-between;
   padding: 6px 12px;
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--tint-2);
   border-bottom: 1px solid var(--border-subtle);
   min-height: 32px;
   flex-shrink: 0;
@@ -958,7 +1120,7 @@ body {
   font-family: var(--font-mono);
   font-size: 10px;
   color: var(--text-muted);
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--tint-4);
   padding: 0 6px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border-subtle);
@@ -1073,7 +1235,7 @@ body {
   font-size: 10.5px;
   padding: 3px 6px;
   border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--tint-2);
 }
 
 .event-timestamp {
@@ -1107,7 +1269,7 @@ body {
 }
 
 .event-tag.checking {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--tint-5);
   color: var(--text-secondary);
 }
 
@@ -1228,7 +1390,7 @@ body {
 
 .card-divider {
   height: 1px;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--tint-4);
   margin: 2px 0;
 }
 
@@ -1256,7 +1418,7 @@ body {
   font-family: var(--font-mono);
   font-size: 10px;
   color: var(--text-muted);
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--tint-4);
   padding: 1px 5px;
   border-radius: var(--radius-sm);
   margin-left: 6px;
@@ -1287,7 +1449,7 @@ body {
   appearance: none;
   width: 100%;
   height: 5px;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--tint-5);
   border-radius: 4px;
   outline: none;
   cursor: pointer;
@@ -1296,7 +1458,7 @@ body {
 }
 
 .range-input:hover {
-  background: rgba(255, 255, 255, 0.12);
+  background: var(--tint-7);
 }
 
 .range-input::-webkit-slider-thumb {
@@ -1403,7 +1565,7 @@ body {
 .disclosure-section {
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
-  background: rgba(255, 255, 255, 0.015);
+  background: var(--tint-1);
   overflow: hidden;
   transition:
     border-color 0.15s ease,
@@ -1416,7 +1578,7 @@ body {
 
 .disclosure-section.open {
   border-color: rgba(99, 102, 241, 0.25);
-  background: rgba(14, 20, 32, 0.45);
+  background: var(--surface-open);
 }
 
 .disclosure-trigger {
@@ -1437,7 +1599,7 @@ body {
 }
 
 .disclosure-trigger:hover {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--tint-3);
 }
 
 .disclosure-trigger-left {
@@ -1518,7 +1680,7 @@ body {
 
 .disclosure-wrapper.open .disclosure-body {
   padding: 10px 12px 12px 12px;
-  border-top-color: rgba(255, 255, 255, 0.04);
+  border-top-color: var(--tint-4);
 }
 
 /* Headless Render Prop Toggle Switch */
@@ -1560,7 +1722,7 @@ body {
   width: 36px;
   height: 20px;
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--tint-6);
   border: 1px solid var(--border-subtle);
   padding: 2px;
   cursor: pointer;
@@ -1621,7 +1783,7 @@ body {
   align-items: center;
   justify-content: space-between;
   padding: var(--space-3) var(--space-4);
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--overlay-2);
   border-bottom: 1px solid var(--border-subtle);
 }
 
@@ -1657,10 +1819,12 @@ body {
 
 .code-export-tabs-bar {
   padding: 6px var(--space-4);
-  background: rgba(0, 0, 0, 0.12);
+  background: var(--overlay-1);
   border-bottom: 1px solid var(--border-subtle);
   display: flex;
   align-items: center;
+  /* 4 non-wrapping tabs overflow on narrow screens — scroll instead of stretching the page */
+  overflow-x: auto;
 }
 
 .code-export-tabs-bar .segmented-control {
@@ -1683,7 +1847,7 @@ body {
 }
 
 .code-snippet-box {
-  background: #050810;
+  background: var(--code-bg);
   padding: var(--space-4);
   overflow-x: auto;
   font-family: var(--font-mono);
@@ -1702,20 +1866,20 @@ body {
 
 /* Syntax Highlighting Tokens */
 .token-keyword {
-  color: #c084fc;
+  color: var(--code-keyword);
   font-weight: 600;
 }
 
 .token-string {
-  color: #86efac;
+  color: var(--code-string);
 }
 
 .token-tag {
-  color: #60a5fa;
+  color: var(--code-tag);
 }
 
 .token-comment {
-  color: #64748b;
+  color: var(--code-comment);
   font-style: italic;
 }
 
