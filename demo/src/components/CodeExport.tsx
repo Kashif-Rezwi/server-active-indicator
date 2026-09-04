@@ -2,14 +2,14 @@ import { useState } from "react";
 import type { DemoIndicatorConfig } from "./ControlPanel";
 import { CheckIcon, CodeIcon } from "./Icons";
 
-export type SupportedFramework = "react" | "next" | "vue" | "vanilla";
+export type IntegrationMode = "react-component" | "react-hook" | "next" | "vanilla";
 
 interface CodeExportProps {
   config: DemoIndicatorConfig;
 }
 
 export function CodeExport({ config }: CodeExportProps) {
-  const [framework, setFramework] = useState<SupportedFramework>("react");
+  const [mode, setMode] = useState<IntegrationMode>("react-component");
   const [copied, setCopied] = useState(false);
 
   const generateCode = (): string => {
@@ -26,8 +26,13 @@ export function CodeExport({ config }: CodeExportProps) {
       props.push(`messages={${JSON.stringify(config.messages, null, 2)}}`);
     }
 
-    switch (framework) {
-      case "react": {
+    const hookOptions: string[] = [];
+    if (config.revealDelay !== 3000) hookOptions.push(`revealDelay: ${config.revealDelay},`);
+    if (config.pollInterval !== 5000) hookOptions.push(`pollInterval: ${config.pollInterval},`);
+    if (config.offlineAfter !== 60000) hookOptions.push(`offlineAfter: ${config.offlineAfter},`);
+
+    switch (mode) {
+      case "react-component": {
         if (config.useRenderProp) {
           return `import { ServerStatus } from "server-active-indicator/react";
 
@@ -59,6 +64,38 @@ export function App() {
 }`;
       }
 
+      case "react-hook": {
+        const optionsBlock = hookOptions.length > 0 ? `\n  ${hookOptions.join("\n  ")}` : "";
+
+        return `import { useServerStatus } from "server-active-indicator/react";
+
+export function CustomServerIndicator() {
+  const { status, elapsedSeconds, refresh } = useServerStatus({
+    healthUrl: "https://api.example.com/health",${optionsBlock}
+  });
+
+  if (status === "waking") {
+    return (
+      <div className="custom-waking-ui">
+        Server is spinning up... ({elapsedSeconds}s)
+      </div>
+    );
+  }
+
+  if (status === "offline") {
+    return (
+      <div className="custom-offline-ui">
+        <span>Server appears to be offline</span>
+        <button type="button" onClick={refresh}>Retry</button>
+      </div>
+    );
+  }
+
+  // Silence on success: renders nothing when active or warm
+  return null;
+}`;
+      }
+
       case "next": {
         return `'use client';
 
@@ -73,41 +110,6 @@ export function GlobalServerStatus() {
 }`;
       }
 
-      case "vue": {
-        return `<script setup>
-import { ref, onMounted, onUnmounted } from "vue";
-import { createMonitor } from "server-active-indicator";
-
-const status = ref("checking");
-const elapsed = ref(0);
-let monitor;
-
-onMounted(() => {
-  monitor = createMonitor({
-    healthUrl: "https://api.example.com/health",
-    revealDelay: ${config.revealDelay},
-    pollInterval: ${config.pollInterval},
-    offlineAfter: ${config.offlineAfter},
-  });
-
-  monitor.subscribe((snap) => {
-    status.value = snap.status;
-    elapsed.value = snap.elapsedSeconds;
-  });
-});
-
-onUnmounted(() => {
-  monitor?.destroy();
-});
-</script>
-
-<template>
-  <div v-if="status === 'waking'" class="waking-banner">
-    Starting up... ({{ elapsed }}s)
-  </div>
-</template>`;
-      }
-
       case "vanilla": {
         return `import { createMonitor } from "server-active-indicator";
 
@@ -118,14 +120,21 @@ const monitor = createMonitor({
   offlineAfter: ${config.offlineAfter},
 });
 
+// Subscribe to state machine transitions:
 const unsubscribe = monitor.subscribe(({ status, elapsedSeconds }) => {
-  console.log("Server status:", status, "Elapsed:", elapsedSeconds);
+  console.log("Status:", status, "Elapsed:", elapsedSeconds);
+
   if (status === "waking") {
-    // Reveal waking notification
+    // Show custom waking UI
   } else if (status === "active") {
-    // Backend is ready
+    // Backend is ready (silence on success)
+  } else if (status === "offline") {
+    // Show offline notification
   }
 });
+
+// Immediate manual recheck (e.g. on Retry button click):
+// monitor.refresh();
 
 // Teardown when unmounting / navigating:
 // unsubscribe();
@@ -151,29 +160,29 @@ const unsubscribe = monitor.subscribe(({ status, elapsedSeconds }) => {
         <div className="framework-segmented-bar">
           <button
             type="button"
-            className={`framework-pill ${framework === "react" ? "active" : ""}`}
-            onClick={() => setFramework("react")}
+            className={`framework-pill ${mode === "react-component" ? "active" : ""}`}
+            onClick={() => setMode("react-component")}
           >
-            React
+            React Component
           </button>
           <button
             type="button"
-            className={`framework-pill ${framework === "next" ? "active" : ""}`}
-            onClick={() => setFramework("next")}
+            className={`framework-pill ${mode === "react-hook" ? "active" : ""}`}
+            onClick={() => setMode("react-hook")}
+          >
+            React Hook (Headless)
+          </button>
+          <button
+            type="button"
+            className={`framework-pill ${mode === "next" ? "active" : ""}`}
+            onClick={() => setMode("next")}
           >
             Next.js
           </button>
           <button
             type="button"
-            className={`framework-pill ${framework === "vue" ? "active" : ""}`}
-            onClick={() => setFramework("vue")}
-          >
-            Vue 3
-          </button>
-          <button
-            type="button"
-            className={`framework-pill ${framework === "vanilla" ? "active" : ""}`}
-            onClick={() => setFramework("vanilla")}
+            className={`framework-pill ${mode === "vanilla" ? "active" : ""}`}
+            onClick={() => setMode("vanilla")}
           >
             Vanilla JS
           </button>

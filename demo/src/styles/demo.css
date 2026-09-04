@@ -559,6 +559,8 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-2);
   padding: var(--space-3) var(--space-4);
   background: rgba(0, 0, 0, 0.15);
   border-bottom: 1px solid var(--border-subtle);
@@ -573,6 +575,7 @@ body {
 
 .framework-segmented-bar {
   display: flex;
+  flex-wrap: wrap;
   background: var(--bg-surface-raised);
   border-radius: var(--radius-sm);
   border: 1px solid var(--border-subtle);
