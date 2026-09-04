@@ -58,22 +58,7 @@
   --shadow-glow: 0 0 24px var(--brand-glow);
 }
 
-/* Force dark-mode palette on the core <ServerStatus> UI inside demo regardless of OS theme */
-.demo-container {
-  --sai-font-size: 0.8125rem;
-  --sai-waking-bg: rgba(120, 53, 15, 0.38);
-  --sai-waking-border: rgba(251, 191, 36, 0.3);
-  --sai-waking-text: #fde68a;
-  --sai-waking-accent: #fbbf24;
-  --sai-active-bg: rgba(20, 83, 45, 0.38);
-  --sai-active-border: rgba(74, 222, 128, 0.3);
-  --sai-active-text: #86efac;
-  --sai-active-accent: #4ade80;
-  --sai-offline-bg: rgba(127, 29, 29, 0.38);
-  --sai-offline-border: rgba(248, 113, 113, 0.3);
-  --sai-offline-text: #fca5a5;
-  --sai-offline-accent: #f87171;
-}
+
 
 * {
   box-sizing: border-box;
