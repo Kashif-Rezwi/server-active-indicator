@@ -225,7 +225,7 @@ export function PulseApp({
                 <strong>
                   nothing (<code>null</code>)
                 </strong>{" "}
-                — zero layout shifts and no distracting badges.
+                to avoid layout shifts and unnecessary badges.
               </>
             )}
             {snapshot.status === "waking" && (

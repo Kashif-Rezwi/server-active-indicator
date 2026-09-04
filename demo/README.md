@@ -1,4 +1,4 @@
-# server-active-indicator — Interactive Live Demo
+# server-active-indicator: Interactive Live Demo
 
 Interactive live sandbox and realistic application demonstration for [`server-active-indicator`](https://github.com/Kashif-Rezwi/server-active-indicator).
 

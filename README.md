@@ -20,7 +20,7 @@
 
 Free-tier hosts (Render, Railway, Fly.io, Koyeb) spin your backend down after a few minutes without traffic. The next visitor's browser gets your frontend instantly — but the first API request hangs for up to a minute while the service wakes. Nothing on screen explains why. Users assume your app is broken and leave.
 
-`server-active-indicator` watches a lightweight `/health` endpoint and, only when a request is taking suspiciously long, shows a calm, honest message: _"The server is starting up — this can take up to a minute on first visit."_ When the backend responds, it confirms briefly and disappears.
+`server-active-indicator` watches a lightweight `/health` endpoint and, only when a request is taking suspiciously long, shows a calm, honest message: _"The server is starting up. This can take up to a minute on first visit."_ When the backend responds, it confirms briefly and disappears.
 
 **When the backend is warm, it renders nothing. Silence on success is the product.**
 

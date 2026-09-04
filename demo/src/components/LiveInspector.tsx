@@ -1,5 +1,5 @@
 import type { MonitorSnapshot } from "server-active-indicator";
-import { TrashIcon } from "./Icons";
+import { CpuIcon, TrashIcon } from "./Icons";
 
 interface LiveInspectorProps {
   snapshot: MonitorSnapshot;
@@ -12,10 +12,11 @@ export function LiveInspector({ snapshot, events, onClearEvents }: LiveInspector
     <div className="control-card runtime-inspector-card">
       <div className="card-title-bar">
         <div className="inspector-title-row">
+          <CpuIcon className="card-title-icon" />
           <span className="card-title-heading">State Machine & Telemetry</span>
         </div>
 
-        {/* Clean status indicator without pill styling — maintains font, dot color, and smooth blink */}
+        {/* Clean status indicator without pill styling; maintains font, dot color, and smooth blink */}
         <div className={`inspector-live-status ${snapshot.status}`}>
           <span className={`live-status-dot ${snapshot.status}`} aria-hidden="true" />
           <span className="live-status-text">{snapshot.status}</span>
@@ -23,57 +24,64 @@ export function LiveInspector({ snapshot, events, onClearEvents }: LiveInspector
       </div>
 
       <div className="runtime-inspector-grid">
-        {/* Left Column: Live Snapshot Readout */}
-        <div className="telemetry-box">
-          <div className="telemetry-row">
-            <span className="telemetry-key">status</span>
-            <span className={`telemetry-val ${snapshot.status}`}>
-              &quot;{snapshot.status}&quot;
-            </span>
+        {/* Left Window: Live Snapshot Readout */}
+        <div className="inspector-window">
+          <div className="inspector-window-header">
+            <span className="inspector-window-title">Snapshot State</span>
+            <span className="inspector-window-tag">MonitorSnapshot</span>
           </div>
 
-          <div className="telemetry-row">
-            <span className="telemetry-key">elapsedSeconds</span>
-            <span className="telemetry-val">{snapshot.elapsedSeconds}s</span>
-          </div>
-
-          <div className="telemetry-row">
-            <span className="telemetry-key">attempts</span>
-            <span className="telemetry-val">{snapshot.attempts}</span>
-          </div>
-
-          <div className="telemetry-row">
-            <span className="telemetry-key">wasCold</span>
-            <span className="telemetry-val">{snapshot.wasCold ? "true" : "false"}</span>
-          </div>
-
-          <div className="telemetry-row">
-            <span className="telemetry-key">lastLatencyMs</span>
-            <span className="telemetry-val">
-              {snapshot.lastLatencyMs !== null ? `${snapshot.lastLatencyMs}ms` : "null"}
-            </span>
-          </div>
-
-          {snapshot.reason && (
+          <div className="inspector-window-body telemetry-body">
             <div className="telemetry-row">
-              <span className="telemetry-key">reason</span>
-              <span className="telemetry-val warning">&quot;{snapshot.reason}&quot;</span>
+              <span className="telemetry-key">status</span>
+              <span className={`telemetry-val ${snapshot.status}`}>
+                &quot;{snapshot.status}&quot;
+              </span>
             </div>
-          )}
 
-          {snapshot.offlineKind && (
             <div className="telemetry-row">
-              <span className="telemetry-key">offlineKind</span>
-              <span className="telemetry-val danger">&quot;{snapshot.offlineKind}&quot;</span>
+              <span className="telemetry-key">elapsedSeconds</span>
+              <span className="telemetry-val">{snapshot.elapsedSeconds}s</span>
             </div>
-          )}
+
+            <div className="telemetry-row">
+              <span className="telemetry-key">attempts</span>
+              <span className="telemetry-val">{snapshot.attempts}</span>
+            </div>
+
+            <div className="telemetry-row">
+              <span className="telemetry-key">wasCold</span>
+              <span className="telemetry-val">{snapshot.wasCold ? "true" : "false"}</span>
+            </div>
+
+            <div className="telemetry-row">
+              <span className="telemetry-key">lastLatencyMs</span>
+              <span className="telemetry-val">
+                {snapshot.lastLatencyMs !== null ? `${snapshot.lastLatencyMs}ms` : "null"}
+              </span>
+            </div>
+
+            {snapshot.reason && (
+              <div className="telemetry-row">
+                <span className="telemetry-key">reason</span>
+                <span className="telemetry-val warning">&quot;{snapshot.reason}&quot;</span>
+              </div>
+            )}
+
+            {snapshot.offlineKind && (
+              <div className="telemetry-row">
+                <span className="telemetry-key">offlineKind</span>
+                <span className="telemetry-val danger">&quot;{snapshot.offlineKind}&quot;</span>
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Right Column: Transition Event Log */}
-        <div className="transition-events-column">
-          <div className="control-label-row">
-            <span className="event-log-heading">Transition Trace</span>
-            {onClearEvents && events.length > 0 && (
+        {/* Right Window: Transition Event Log */}
+        <div className="inspector-window">
+          <div className="inspector-window-header">
+            <span className="inspector-window-title">Transition Trace</span>
+            {onClearEvents && events.length > 0 ? (
               <button
                 type="button"
                 className="clear-log-btn"
@@ -84,10 +92,12 @@ export function LiveInspector({ snapshot, events, onClearEvents }: LiveInspector
                 <TrashIcon />
                 <span>Clear</span>
               </button>
+            ) : (
+              <span className="inspector-window-tag">{events.length} events</span>
             )}
           </div>
 
-          <div className="event-log-container" role="log" aria-live="polite">
+          <div className="inspector-window-body log-body" role="log" aria-live="polite">
             {events.length === 0 ? (
               <div className="event-log-empty">Waiting for status events...</div>
             ) : (
