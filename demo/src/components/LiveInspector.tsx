@@ -1,5 +1,5 @@
 import type { MonitorSnapshot } from "server-active-indicator";
-import { CpuIcon, TrashIcon } from "./Icons";
+import { ActivityIcon, TrashIcon } from "./Icons";
 
 interface LiveInspectorProps {
   snapshot: MonitorSnapshot;
@@ -12,8 +12,8 @@ export function LiveInspector({ snapshot, events, onClearEvents }: LiveInspector
     <div className="control-card runtime-inspector-card">
       <div className="card-title-bar">
         <div className="inspector-title-row">
-          <CpuIcon className="card-title-icon" />
-          <span className="card-title-heading">State Machine & Telemetry</span>
+          <ActivityIcon className="card-title-icon" />
+          <span className="card-title-heading">Live Inspector</span>
         </div>
 
         {/* Clean status indicator without pill styling; maintains font, dot color, and smooth blink */}

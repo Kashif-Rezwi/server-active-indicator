@@ -64,14 +64,14 @@ export function ControlPanel({
 
   return (
     <div className="control-panel-stack">
-      {/* 1. Backend Simulation Card */}
+      {/* 1. Server Sandbox Card */}
       <div className="control-card">
         <div className="card-title-bar">
           <div className="card-title-row">
             <ServerIcon className="card-title-icon" />
-            <span className="card-title-heading">Backend Simulation</span>
+            <span className="card-title-heading">Server Sandbox</span>
           </div>
-          <span className="card-title-sub">Host Sandbox</span>
+          <span className="card-title-sub">Playground</span>
         </div>
 
         <div className="card-body">
@@ -169,12 +169,12 @@ export function ControlPanel({
         </div>
       </div>
 
-      {/* 2. Indicator Configuration */}
+      {/* 2. Component Config */}
       <div className="control-card">
         <div className="card-title-bar">
           <div className="card-title-row">
             <SlidersIcon className="card-title-icon" />
-            <span className="card-title-heading">Indicator Options</span>
+            <span className="card-title-heading">Component Config</span>
           </div>
           <span className="card-title-sub">Props Config</span>
         </div>

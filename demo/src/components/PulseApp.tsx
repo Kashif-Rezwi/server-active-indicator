@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import type { MonitorSnapshot } from "server-active-indicator";
 import type { SimulatedBackendHandle } from "../simulation/types";
-import { ActivityIcon, RefreshIcon } from "./Icons";
+import { SparklesIcon, RefreshIcon } from "./Icons";
 
 interface PulseAppProps {
   backend: SimulatedBackendHandle;
@@ -87,8 +87,8 @@ export function PulseApp({
       {/* SaaS Application Header */}
       <div className="card-title-bar mock-app-topbar">
         <div className="card-title-row">
-          <ActivityIcon className="card-title-icon" />
-          <span className="card-title-heading">Pulse Cloud Console</span>
+          <SparklesIcon className="card-title-icon" />
+          <span className="card-title-heading">App Preview</span>
           <span className="mock-app-env">free-tier</span>
         </div>
 
