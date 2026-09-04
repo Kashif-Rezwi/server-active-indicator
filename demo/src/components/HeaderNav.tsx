@@ -38,7 +38,7 @@ export function HeaderNav() {
 
           <div className="brand-title">
             <span>server-active-indicator</span>
-            <span className="brand-badge">v0.2.3</span>
+            <span className="brand-badge">v{__PKG_VERSION__}</span>
           </div>
         </div>
 
