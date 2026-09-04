@@ -12,7 +12,9 @@
 - **Accessible out of the box** — `role="status"`, dark mode, reduced motion, themeable via CSS custom properties.
 - **Modern runtimes** — requires `AbortSignal.timeout`/`AbortSignal.any` (all evergreen browsers since 2023–24; Node ≥ 20.3 for SSR health checks).
 
-![Demo: the indicator appears while a cold backend starts up, confirms it is ready, then disappears — shown in both dark and light themes](https://raw.githubusercontent.com/Kashif-Rezwi/server-active-indicator/main/docs/assets/demo.gif)
+![Demo: silence on a warm backend, a "starting up" banner with a live elapsed timer during a cold start, a brief "The server is ready" confirmation, and offline banners with a Retry button for server errors and network drops — dark theme](https://raw.githubusercontent.com/Kashif-Rezwi/server-active-indicator/main/docs/assets/demo.gif)
+
+> Recorded from the live interactive demo — play with all the scenarios yourself at **[server-active-indicator.vercel.app](https://server-active-indicator.vercel.app/)**.
 
 ---
 
