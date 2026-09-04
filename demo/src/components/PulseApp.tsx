@@ -85,10 +85,10 @@ export function PulseApp({
   return (
     <div className="mock-app-card">
       {/* SaaS Application Header */}
-      <div className="mock-app-topbar">
-        <div className="mock-app-brand">
-          <ActivityIcon className="app-brand-icon" />
-          <span className="app-brand-title">Pulse Cloud Console</span>
+      <div className="card-title-bar mock-app-topbar">
+        <div className="card-title-row">
+          <ActivityIcon className="card-title-icon" />
+          <span className="card-title-heading">Pulse Cloud Console</span>
           <span className="mock-app-env">free-tier</span>
         </div>
 
@@ -98,7 +98,7 @@ export function PulseApp({
         <div className="mock-app-actions">
           <button
             type="button"
-            className="refresh-trigger-btn"
+            className="card-header-btn refresh-trigger-btn"
             onClick={onRefreshTriggered}
             title="Restart cold boot cycle to test indicator"
             aria-label="Restart cold-start cycle"
@@ -196,11 +196,11 @@ export function PulseApp({
             </div>
 
             <span
-              className={`silence-state-chip ${
+              className={`metric-badge ${
                 snapshot.status === "active"
-                  ? "ready"
+                  ? "positive"
                   : snapshot.status === "waking"
-                    ? "waking"
+                    ? "warning"
                     : snapshot.status === "offline"
                       ? "danger"
                       : "neutral"

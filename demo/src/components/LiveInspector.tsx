@@ -81,20 +81,21 @@ export function LiveInspector({ snapshot, events, onClearEvents }: LiveInspector
         <div className="inspector-window">
           <div className="inspector-window-header">
             <span className="inspector-window-title">Transition Trace</span>
-            {onClearEvents && events.length > 0 ? (
-              <button
-                type="button"
-                className="clear-log-btn"
-                onClick={onClearEvents}
-                title="Clear transition trace log"
-                aria-label="Clear trace log"
-              >
-                <TrashIcon />
-                <span>Clear</span>
-              </button>
-            ) : (
+            <div className="inspector-window-actions">
               <span className="inspector-window-tag">{events.length} events</span>
-            )}
+              {onClearEvents && events.length > 0 && (
+                <button
+                  type="button"
+                  className="clear-log-btn"
+                  onClick={onClearEvents}
+                  title="Clear transition trace log"
+                  aria-label="Clear trace log"
+                >
+                  <TrashIcon />
+                  <span>Clear</span>
+                </button>
+              )}
+            </div>
           </div>
 
           <div className="inspector-window-body log-body" role="log" aria-live="polite">

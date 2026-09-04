@@ -4,7 +4,9 @@ import type { SimulatedBackendHandle } from "../simulation/types";
 import {
   AlertTriangleIcon,
   ChevronDownIcon,
+  ClockIcon,
   GlobeIcon,
+  ServerIcon,
   SlidersIcon,
   SnowflakeIcon,
   WifiOffIcon,
@@ -65,7 +67,10 @@ export function ControlPanel({
       {/* 1. Backend Simulation Card */}
       <div className="control-card">
         <div className="card-title-bar">
-          <span className="card-title-heading">Backend Simulation</span>
+          <div className="card-title-row">
+            <ServerIcon className="card-title-icon" />
+            <span className="card-title-heading">Backend Simulation</span>
+          </div>
           <span className="card-title-sub">Host Sandbox</span>
         </div>
 
@@ -167,7 +172,10 @@ export function ControlPanel({
       {/* 2. Indicator Configuration */}
       <div className="control-card">
         <div className="card-title-bar">
-          <span className="card-title-heading">Indicator Options</span>
+          <div className="card-title-row">
+            <SlidersIcon className="card-title-icon" />
+            <span className="card-title-heading">Indicator Options</span>
+          </div>
           <span className="card-title-sub">Props Config</span>
         </div>
 
@@ -277,7 +285,7 @@ export function ControlPanel({
               aria-controls="advanced-policies-body"
             >
               <div className="disclosure-trigger-left">
-                <SlidersIcon className="disclosure-icon" />
+                <ClockIcon className="disclosure-icon" />
                 <span>Advanced Timing & Policies</span>
               </div>
               <div className="disclosure-trigger-right">

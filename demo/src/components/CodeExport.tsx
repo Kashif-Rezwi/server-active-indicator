@@ -220,15 +220,15 @@ const unsubscribe = monitor.subscribe(({ status, elapsedSeconds }) => {
 
   return (
     <div className="control-card code-export-card">
-      <div className="code-export-header">
-        <div className="code-export-title-row">
-          <CodeIcon />
+      <div className="card-title-bar">
+        <div className="card-title-row">
+          <CodeIcon className="card-title-icon" />
           <span className="card-title-heading">Integration Code</span>
         </div>
 
         <button
           type="button"
-          className="copy-code-btn"
+          className="card-header-btn copy-code-btn"
           onClick={handleCopyCode}
           title="Copy code snippet to clipboard"
           aria-label="Copy code snippet"
@@ -247,43 +247,45 @@ const unsubscribe = monitor.subscribe(({ status, elapsedSeconds }) => {
         </button>
       </div>
 
-      <div className="framework-tabs-bar" role="tablist" aria-label="Integration Framework">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={mode === "react-component"}
-          className={`framework-pill ${mode === "react-component" ? "active" : ""}`}
-          onClick={() => setMode("react-component")}
-        >
-          React Component
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={mode === "react-hook"}
-          className={`framework-pill ${mode === "react-hook" ? "active" : ""}`}
-          onClick={() => setMode("react-hook")}
-        >
-          useServerStatus Hook
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={mode === "next"}
-          className={`framework-pill ${mode === "next" ? "active" : ""}`}
-          onClick={() => setMode("next")}
-        >
-          Next.js
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={mode === "vanilla"}
-          className={`framework-pill ${mode === "vanilla" ? "active" : ""}`}
-          onClick={() => setMode("vanilla")}
-        >
-          Vanilla JS
-        </button>
+      <div className="code-export-tabs-bar">
+        <div className="segmented-control" role="tablist" aria-label="Integration Framework">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={mode === "react-component"}
+            className={`segment-btn ${mode === "react-component" ? "active" : ""}`}
+            onClick={() => setMode("react-component")}
+          >
+            React Component
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={mode === "react-hook"}
+            className={`segment-btn ${mode === "react-hook" ? "active" : ""}`}
+            onClick={() => setMode("react-hook")}
+          >
+            useServerStatus Hook
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={mode === "next"}
+            className={`segment-btn ${mode === "next" ? "active" : ""}`}
+            onClick={() => setMode("next")}
+          >
+            Next.js
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={mode === "vanilla"}
+            className={`segment-btn ${mode === "vanilla" ? "active" : ""}`}
+            onClick={() => setMode("vanilla")}
+          >
+            Vanilla JS
+          </button>
+        </div>
       </div>
 
       <div className="code-snippet-box">
