@@ -16,9 +16,8 @@ export function LiveInspector({ snapshot, events, onClearEvents }: LiveInspector
           <span className="card-title-heading">Live Inspector</span>
         </div>
 
-        {/* Clean status indicator without pill styling; maintains font, dot color, and smooth blink */}
+        {/* Clean status indicator with smooth blinking text */}
         <div className={`inspector-live-status ${snapshot.status}`}>
-          <span className={`live-status-dot ${snapshot.status}`} aria-hidden="true" />
           <span className="live-status-text">{snapshot.status}</span>
         </div>
       </div>

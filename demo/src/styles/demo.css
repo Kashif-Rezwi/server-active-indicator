@@ -34,6 +34,11 @@
   --overlay-3: rgba(0, 0, 0, 0.3);
   --surface-open: rgba(14, 20, 32, 0.45);
 
+  /* Inset "terminal" surfaces (inspector windows): header is one step
+     lighter than the body in BOTH themes for consistent window chrome */
+  --bg-inset: #0a101c;
+  --bg-inset-header: #111a2e;
+
   /* Borders */
   --border-subtle: var(--tint-5);
   --border-medium: rgba(255, 255, 255, 0.16);
@@ -108,10 +113,14 @@
   --tint-5: rgba(15, 23, 42, 0.12);
   --tint-6: rgba(15, 23, 42, 0.14);
   --tint-7: rgba(15, 23, 42, 0.18);
-  --overlay-1: rgba(15, 23, 42, 0.045);
-  --overlay-2: rgba(15, 23, 42, 0.035);
-  --overlay-3: rgba(15, 23, 42, 0.05);
-  --surface-open: rgba(99, 102, 241, 0.035);
+  /* Keep the 1 < 2 < 3 darkening order (same semantics as the dark theme) */
+  --overlay-1: rgba(15, 23, 42, 0.03);
+  --overlay-2: rgba(15, 23, 42, 0.05);
+  --overlay-3: rgba(15, 23, 42, 0.07);
+  --surface-open: rgba(15, 23, 42, 0.045);
+
+  --bg-inset: #eff2f7;
+  --bg-inset-header: #ffffff;
 
   --border-subtle: rgba(15, 23, 42, 0.09);
   --border-medium: rgba(15, 23, 42, 0.16);
@@ -560,7 +569,7 @@ body {
 
 .control-card:hover,
 .mock-app-card:hover {
-  border-color: var(--tint-7);
+  border-color: var(--border-medium);
 }
 
 .card-title-bar {
@@ -732,7 +741,7 @@ body {
 }
 
 .metric-card {
-  background: var(--bg-surface);
+  background: var(--bg-surface-raised);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   padding: var(--space-3) var(--space-4);
@@ -840,7 +849,7 @@ body {
 
 /* Indicator Behavior Card (Current State & Behavior) */
 .silence-demonstrator {
-  background: var(--bg-surface);
+  background: var(--bg-surface-raised);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   padding: var(--space-4);
@@ -852,18 +861,30 @@ body {
 
 .silence-demonstrator.ready {
   border-color: rgba(var(--success-rgb), 0.3);
-  background: linear-gradient(180deg, rgba(var(--success-rgb), 0.05) 0%, var(--bg-surface) 100%);
+  background: linear-gradient(
+    180deg,
+    rgba(var(--success-rgb), 0.05) 0%,
+    var(--bg-surface-raised) 100%
+  );
 }
 
 .silence-demonstrator.booting {
   border-color: rgba(var(--warning-rgb), 0.3);
-  background: linear-gradient(180deg, rgba(var(--warning-rgb), 0.05) 0%, var(--bg-surface) 100%);
+  background: linear-gradient(
+    180deg,
+    rgba(var(--warning-rgb), 0.05) 0%,
+    var(--bg-surface-raised) 100%
+  );
 }
 
 .silence-demonstrator.crashed,
 .silence-demonstrator.disconnected {
   border-color: rgba(var(--danger-rgb), 0.3);
-  background: linear-gradient(180deg, rgba(var(--danger-rgb), 0.05) 0%, var(--bg-surface) 100%);
+  background: linear-gradient(
+    180deg,
+    rgba(var(--danger-rgb), 0.05) 0%,
+    var(--bg-surface-raised) 100%
+  );
 }
 
 .silence-demo-header {
@@ -1033,11 +1054,10 @@ body {
   flex-shrink: 0;
 }
 
-/* State Machine & Telemetry Status: Clean font and dot color with smooth blink (no pill style) */
+/* State Machine & Telemetry Status: Clean font with smooth pulse only while in process (checking/waking) */
 .inspector-live-status {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
   font-family: var(--font-mono);
   font-size: 11.5px;
   font-weight: 600;
@@ -1045,23 +1065,22 @@ body {
   letter-spacing: 0.04em;
 }
 
+.inspector-live-status.checking,
+.inspector-live-status.waking {
+  animation: smooth-blink 1.5s ease-in-out infinite;
+}
+
 .live-status-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: currentColor;
-  animation: smooth-blink 1.8s ease-in-out infinite;
+  display: none;
 }
 
 @keyframes smooth-blink {
   0%,
   100% {
     opacity: 1;
-    transform: scale(1);
   }
   50% {
     opacity: 0.3;
-    transform: scale(0.85);
   }
 }
 
@@ -1102,7 +1121,7 @@ body {
 .inspector-window {
   display: flex;
   flex-direction: column;
-  background: var(--overlay-3);
+  background: var(--bg-inset);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-sm);
   overflow: hidden;
@@ -1114,7 +1133,7 @@ body {
   align-items: center;
   justify-content: space-between;
   padding: 6px 12px;
-  background: var(--tint-2);
+  background: var(--bg-inset-header);
   border-bottom: 1px solid var(--border-subtle);
   min-height: 32px;
   flex-shrink: 0;
@@ -1870,9 +1889,9 @@ body {
 }
 
 .code-export-tabs-bar {
-  padding: 6px var(--space-4);
-  background: var(--overlay-1);
-  border-bottom: 1px solid var(--border-subtle);
+  padding: var(--space-3) var(--space-4) 0;
+  background: var(--code-bg);
+  border-bottom: none;
   display: flex;
   align-items: center;
   /* 4 non-wrapping tabs overflow on narrow screens — scroll instead of stretching the page */
@@ -1900,7 +1919,7 @@ body {
 
 .code-snippet-box {
   background: var(--code-bg);
-  padding: var(--space-4);
+  padding: var(--space-3) var(--space-4) var(--space-4);
   overflow-x: auto;
   font-family: var(--font-mono);
   font-size: 11.5px;
