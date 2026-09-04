@@ -1,5 +1,5 @@
 import type { SimulatedBackendHandle } from "../simulation/types";
-import { InfoIcon, RefreshIcon } from "./Icons";
+import { ActivityIcon, InfoIcon, RefreshIcon } from "./Icons";
 
 interface PulseAppProps {
   backend: SimulatedBackendHandle;
@@ -12,27 +12,55 @@ export function PulseApp({ backend, onRefreshTriggered }: PulseAppProps) {
   const isColdOrBooting =
     telemetry.serverState === "sleeping" || telemetry.serverState === "booting";
 
+  const getHostStateInfo = () => {
+    switch (telemetry.serverState) {
+      case "sleeping":
+        return {
+          badge: "Asleep",
+          badgeClass: "neutral",
+          value: "Sleeping (Idle)",
+          subtext: "Spins down after 20s idle",
+        };
+      case "booting":
+        return {
+          badge: "Starting Up",
+          badgeClass: "warning",
+          value: `Waking (${telemetry.bootProgress}%)`,
+          subtext: `Elapsed: ${telemetry.elapsedBootSeconds}s / ${backend.config.wakeDuration / 1000}s`,
+        };
+      case "ready":
+        return {
+          badge: "Warm",
+          badgeClass: "positive",
+          value: "Ready (Online)",
+          subtext: "Auto-sleeps after 20s idle",
+        };
+      case "crashed":
+        return {
+          badge: "503 Error",
+          badgeClass: "danger",
+          value: "Service Unavailable",
+          subtext: "Simulated server crash",
+        };
+      case "disconnected":
+        return {
+          badge: "Offline",
+          badgeClass: "danger",
+          value: "Network Disconnected",
+          subtext: "Browser offline simulation",
+        };
+    }
+  };
+
+  const hostInfo = getHostStateInfo();
+
   return (
     <div className="mock-app-card">
       <div className="mock-app-topbar">
         <div className="mock-app-brand">
-          <div className="pulse-icon">
-            <svg
-              width="13"
-              height="13"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
-            </svg>
-          </div>
-          <span>Pulse Analytics</span>
-          <span className="mock-app-env">prod-us-east</span>
+          <ActivityIcon className="app-brand-icon" />
+          <span>Client Application</span>
+          <span className="mock-app-env">render-free-tier</span>
         </div>
 
         <div className="mock-app-actions">
@@ -40,7 +68,7 @@ export function PulseApp({ backend, onRefreshTriggered }: PulseAppProps) {
             type="button"
             className="refresh-trigger-btn"
             onClick={onRefreshTriggered}
-            title="Dispatch a client API request to the backend"
+            title="Send an API request to test backend responsiveness"
           >
             <RefreshIcon />
             <span>Query API</span>
@@ -49,36 +77,48 @@ export function PulseApp({ backend, onRefreshTriggered }: PulseAppProps) {
       </div>
 
       <div className="mock-app-body">
-        {/* Metric Cards Grid: 2 essential cards */}
+        {/* Metric Cards Grid: Dynamic & Contextual to Backend Health */}
         <div className="metrics-grid">
           <div className="metric-card">
             <div className="metric-header">
-              <span>Total Requests</span>
-              <span className="metric-badge positive">+14.2%</span>
+              <span>Host Container</span>
+              <span className={`metric-badge ${hostInfo.badgeClass}`}>{hostInfo.badge}</span>
             </div>
-            {isColdOrBooting ? (
-              <div className="skeleton skeleton-metric" />
-            ) : (
-              <div className="metric-value">1,482,920</div>
-            )}
-            <span className="metric-subtext">Across 24 endpoints</span>
+            <div className="metric-value">{hostInfo.value}</div>
+            <span className="metric-subtext">{hostInfo.subtext}</span>
           </div>
 
           <div className="metric-card">
             <div className="metric-header">
-              <span>P95 Latency</span>
-              <span className="metric-badge neutral">
-                {telemetry.lastResponseMs ? `${telemetry.lastResponseMs}ms` : "38ms"}
+              <span>Health Probe</span>
+              <span
+                className={`metric-badge ${
+                  telemetry.serverState === "ready"
+                    ? "positive"
+                    : isColdOrBooting
+                      ? "warning"
+                      : "danger"
+                }`}
+              >
+                {telemetry.serverState === "ready"
+                  ? "200 OK"
+                  : isColdOrBooting
+                    ? "Probing"
+                    : "Failed"}
               </span>
             </div>
             {isColdOrBooting ? (
               <div className="skeleton skeleton-metric" />
             ) : (
               <div className="metric-value">
-                {telemetry.lastResponseMs ? `${telemetry.lastResponseMs}` : "38.4"} ms
+                {telemetry.serverState === "ready"
+                  ? `${telemetry.lastResponseMs ?? 42} ms`
+                  : telemetry.serverState === "crashed"
+                    ? "503 Error"
+                    : "No Connection"}
               </div>
             )}
-            <span className="metric-subtext">Edge-optimized probe</span>
+            <span className="metric-subtext">Probe target: /api/health</span>
           </div>
         </div>
 

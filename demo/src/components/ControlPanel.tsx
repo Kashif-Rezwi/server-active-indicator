@@ -65,9 +65,7 @@ export function ControlPanel({
               onClick={() => handleScenarioClick(backend.triggerColdStart)}
             >
               <div className="scenario-btn-top">
-                <span className="scenario-icon-wrapper cold">
-                  <SnowflakeIcon />
-                </span>
+                <SnowflakeIcon className="scenario-icon cold" />
                 <span className="scenario-title">Cold Start</span>
               </div>
               <span className="scenario-desc">Sleeping backend wakes with countdown.</span>
@@ -79,9 +77,7 @@ export function ControlPanel({
               onClick={() => handleScenarioClick(backend.triggerWarmStart)}
             >
               <div className="scenario-btn-top">
-                <span className="scenario-icon-wrapper warm">
-                  <ZapIcon />
-                </span>
+                <ZapIcon className="scenario-icon warm" />
                 <span className="scenario-title">Warm Start</span>
               </div>
               <span className="scenario-desc">Fast 200 OK. Completely silent UI.</span>
@@ -93,9 +89,7 @@ export function ControlPanel({
               onClick={() => handleScenarioClick(backend.triggerServerError)}
             >
               <div className="scenario-btn-top">
-                <span className="scenario-icon-wrapper error">
-                  <AlertTriangleIcon />
-                </span>
+                <AlertTriangleIcon className="scenario-icon error" />
                 <span className="scenario-title">Server 503</span>
               </div>
               <span className="scenario-desc">Host failure with Retry button.</span>
@@ -107,9 +101,7 @@ export function ControlPanel({
               onClick={() => handleScenarioClick(backend.triggerBrowserOffline)}
             >
               <div className="scenario-btn-top">
-                <span className="scenario-icon-wrapper offline">
-                  <WifiOffIcon />
-                </span>
+                <WifiOffIcon className="scenario-icon offline" />
                 <span className="scenario-title">Client Offline</span>
               </div>
               <span className="scenario-desc">Browser connection lost; auto-recovers.</span>

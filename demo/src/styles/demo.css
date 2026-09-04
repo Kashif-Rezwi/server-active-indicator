@@ -252,15 +252,9 @@ body {
   font-size: 14px;
 }
 
-.pulse-icon {
-  width: 22px;
-  height: 22px;
-  border-radius: var(--radius-sm);
-  background: linear-gradient(135deg, #06b6d4, #3b82f6);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
+.app-brand-icon {
+  color: var(--brand-400);
+  flex-shrink: 0;
 }
 
 .mock-app-env {
@@ -362,6 +356,16 @@ body {
 .metric-badge.neutral {
   background: var(--bg-surface-raised);
   color: var(--text-muted);
+}
+
+.metric-badge.warning {
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+}
+
+.metric-badge.danger {
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
 }
 
 .metric-subtext {
@@ -678,40 +682,29 @@ body {
   width: 100%;
 }
 
-.scenario-icon-wrapper {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid var(--border-subtle);
+.scenario-icon {
   flex-shrink: 0;
+  transition: transform 0.15s ease;
 }
 
-.scenario-icon-wrapper.cold {
+.scenario-icon.cold {
   color: var(--color-cold);
-  background: var(--color-cold-bg);
-  border-color: rgba(56, 189, 248, 0.25);
 }
 
-.scenario-icon-wrapper.warm {
+.scenario-icon.warm {
   color: var(--color-success);
-  background: var(--color-success-bg);
-  border-color: rgba(16, 185, 129, 0.25);
 }
 
-.scenario-icon-wrapper.error {
+.scenario-icon.error {
   color: var(--color-danger);
-  background: var(--color-danger-bg);
-  border-color: rgba(244, 63, 94, 0.25);
 }
 
-.scenario-icon-wrapper.offline {
+.scenario-icon.offline {
   color: var(--color-warning);
-  background: var(--color-warning-bg);
-  border-color: rgba(245, 158, 11, 0.25);
+}
+
+.scenario-btn:hover .scenario-icon {
+  transform: scale(1.15);
 }
 
 .scenario-title {
