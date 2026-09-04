@@ -49,7 +49,7 @@ describe("ServerStatus — default UI", () => {
     expect(banner.getAttribute("aria-live")).toBe("polite");
     expect(banner.getAttribute("data-state")).toBe("waking");
     expect(banner.textContent).toContain(
-      "The server is starting up — this can take up to a minute on first visit.",
+      "The server is starting up. This can take up to a minute on first visit.",
     );
     expect(banner.querySelector("svg.sai-spinner")).not.toBeNull();
 
@@ -263,7 +263,7 @@ describe("ServerStatus — default UI", () => {
     const banner = screen.getByRole("status");
     expect(banner.getAttribute("data-state")).toBe("offline");
     expect(banner.getAttribute("data-offline-kind")).toBe("browser");
-    expect(banner.textContent).toContain("You appear to be offline — check your connection.");
+    expect(banner.textContent).toContain("You appear to be offline. Check your connection.");
     expect(banner.querySelector(".sai-retry")).not.toBeNull();
     onLine.mockRestore();
   });
