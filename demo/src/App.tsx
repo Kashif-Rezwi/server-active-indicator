@@ -1,12 +1,12 @@
-import { useState, useRef, useCallback } from "react";
-import { ServerStatus } from "server-active-indicator/react";
-import type { MonitorSnapshot } from "server-active-indicator";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { ServerStatus, ServerStatusProvider, useServerStatus } from "server-active-indicator/react";
 
-import { useSimulatedBackend } from "./simulation/useSimulatedBackend";
 import { HeaderNav } from "./components/HeaderNav";
 import { PulseApp } from "./components/PulseApp";
-import { ControlPanel, type DemoIndicatorConfig } from "./components/ControlPanel";
+import { ControlPanel, type ControlTab, type DemoIndicatorConfig } from "./components/ControlPanel";
 import { LiveInspector } from "./components/LiveInspector";
+import { useSimulatedBackend } from "./simulation/useSimulatedBackend";
+import type { SimulatedBackendHandle } from "./simulation/types";
 
 const INITIAL_DEMO_CONFIG: DemoIndicatorConfig = {
   variant: "banner",
@@ -19,27 +19,162 @@ const INITIAL_DEMO_CONFIG: DemoIndicatorConfig = {
   messages: {},
 };
 
+function IndicatorSlot({ config }: { config: DemoIndicatorConfig }) {
+  if (config.useRenderProp) {
+    return (
+      <ServerStatus
+        variant={config.variant}
+        successDisplayMs={config.successDisplayMs}
+        messages={Object.values(config.messages).some(Boolean) ? config.messages : undefined}
+      >
+        {(snapshot) => {
+          if (snapshot.status === "unknown" || snapshot.status === "checking") return null;
+          if (snapshot.status === "active" && !snapshot.wasCold) return null;
+
+          const bannerClass = `custom-render-prop-banner ${snapshot.status}`;
+
+          return (
+            <div className={bannerClass}>
+              <span>
+                {snapshot.status === "waking" &&
+                  `Custom Render Prop: Server waking up (${snapshot.elapsedSeconds}s)`}
+                {snapshot.status === "active" && "Custom Render Prop: Server online"}
+                {snapshot.status === "offline" && "Custom Render Prop: Backend offline"}
+              </span>
+              {snapshot.status === "offline" && (
+                <button
+                  type="button"
+                  onClick={snapshot.refresh}
+                  className="custom-render-prop-retry"
+                >
+                  Retry
+                </button>
+              )}
+            </div>
+          );
+        }}
+      </ServerStatus>
+    );
+  }
+
+  return (
+    <ServerStatus
+      variant={config.variant}
+      successDisplayMs={config.successDisplayMs}
+      messages={Object.values(config.messages).some(Boolean) ? config.messages : undefined}
+    />
+  );
+}
+
+interface DemoContentProps {
+  backend: SimulatedBackendHandle;
+  config: DemoIndicatorConfig;
+  onConfigChange: (patch: Partial<DemoIndicatorConfig>) => void;
+  onRemount: () => void;
+  activeControlTab: ControlTab;
+  onTabChange: (tab: ControlTab) => void;
+  events: Array<{ timestamp: string; state: string; details: string }>;
+  onRecordEvent: (state: string, details: string) => void;
+}
+
+function DemoContent({
+  backend,
+  config,
+  onConfigChange,
+  onRemount,
+  activeControlTab,
+  onTabChange,
+  events,
+  onRecordEvent,
+}: DemoContentProps) {
+  const snapshot = useServerStatus();
+  const lastStateRef = useRef<string>("unknown");
+
+  useEffect(() => {
+    if (snapshot.status !== "unknown" && snapshot.status !== lastStateRef.current) {
+      const detail =
+        snapshot.status === "waking"
+          ? `Cold start detected (${snapshot.reason || "starting up"})`
+          : snapshot.status === "active"
+            ? `Backend ready in ${snapshot.lastLatencyMs || 0}ms (attempts: ${snapshot.attempts})`
+            : snapshot.status === "offline"
+              ? `Unavailable (${snapshot.offlineKind || "server error"})`
+              : "Checking health probe";
+
+      onRecordEvent(snapshot.status, detail);
+      lastStateRef.current = snapshot.status;
+    }
+  }, [
+    snapshot.status,
+    snapshot.reason,
+    snapshot.lastLatencyMs,
+    snapshot.attempts,
+    snapshot.offlineKind,
+    onRecordEvent,
+  ]);
+
+  return (
+    <>
+      {/* Fixed Top Indicator Slot */}
+      {config.position === "top-bar" && (
+        <div className="indicator-slot-top">
+          <IndicatorSlot config={config} />
+        </div>
+      )}
+
+      {/* Main 2-Column Grid */}
+      <main className="demo-main-grid">
+        {/* Left Column: Pulse SaaS Application */}
+        <section className="app-shell-container">
+          {/* Embedded Indicator Slot */}
+          {config.position === "inside-header" && (
+            <div className="indicator-slot-inline">
+              <IndicatorSlot config={config} />
+            </div>
+          )}
+
+          <PulseApp
+            backend={backend}
+            onRefreshTriggered={() => {
+              backend.triggerColdStart();
+              onRemount();
+            }}
+          />
+        </section>
+
+        {/* Right Column: Control Sidebar & Inspector */}
+        <aside className="demo-sidebar">
+          <ControlPanel
+            config={config}
+            onConfigChange={onConfigChange}
+            backend={backend}
+            onRemountRequired={onRemount}
+            activeTab={activeControlTab}
+            onTabChange={onTabChange}
+          />
+
+          <LiveInspector snapshot={snapshot} events={events} />
+        </aside>
+      </main>
+
+      {/* Floating Bottom Right Indicator Slot */}
+      {config.position === "floating-bottom" && (
+        <div className="indicator-slot-floating">
+          <IndicatorSlot config={config} />
+        </div>
+      )}
+    </>
+  );
+}
+
 export function App() {
   const backend = useSimulatedBackend();
   const [config, setConfig] = useState<DemoIndicatorConfig>(INITIAL_DEMO_CONFIG);
   const [sessionKey, setSessionKey] = useState(0);
-  const [activeControlTab, setActiveControlTab] = useState<
-    "scenarios" | "config" | "i18n" | "theme" | "telemetry"
-  >("scenarios");
-
-  const [currentSnapshot, setCurrentSnapshot] = useState<MonitorSnapshot>({
-    status: "checking",
-    elapsedSeconds: 0,
-    attempts: 0,
-    wasCold: false,
-    lastLatencyMs: null,
-    lastCheckedAt: null,
-  });
-
+  const [activeControlTab, setActiveControlTab] = useState<ControlTab>("options");
   const [events, setEvents] = useState<
     Array<{ timestamp: string; state: string; details: string }>
   >([]);
-  const lastStateRef = useRef<string>("checking");
 
   const handleRemount = useCallback(() => {
     setSessionKey((k) => k + 1);
@@ -53,163 +188,33 @@ export function App() {
     const now = new Date();
     const timeStr =
       now.toTimeString().split(" ")[0] + "." + String(now.getMilliseconds()).padStart(3, "0");
-    setEvents((prev) => [{ timestamp: timeStr, state, details }, ...prev.slice(0, 19)]);
+    setEvents((prev) => [{ timestamp: timeStr, state, details }, ...prev.slice(0, 9)]);
   }, []);
-
-  // Track snapshot transitions
-  const handleSnapshotChange = useCallback(
-    (snap: MonitorSnapshot) => {
-      setCurrentSnapshot(snap);
-      if (snap.status !== lastStateRef.current) {
-        const detail =
-          snap.status === "waking"
-            ? `Cold start detected (${snap.reason || "starting up"})`
-            : snap.status === "active"
-              ? `Backend ready in ${snap.lastLatencyMs || 0}ms (attempts: ${snap.attempts})`
-              : snap.status === "offline"
-                ? `Unavailable (${snap.offlineKind || "server error"})`
-                : "Checking health";
-
-        recordEvent(snap.status, detail);
-        lastStateRef.current = snap.status;
-      }
-    },
-    [recordEvent],
-  );
-
-  // Render Indicator Component
-  const renderIndicator = () => {
-    const commonProps = {
-      key: `session-${sessionKey}`,
-      check: backend.check,
-      variant: config.variant,
-      revealDelay: config.revealDelay,
-      pollInterval: config.pollInterval,
-      offlineAfter: config.offlineAfter,
-      successDisplayMs: config.successDisplayMs,
-      messages: Object.values(config.messages).some(Boolean) ? config.messages : undefined,
-    };
-
-    if (config.useRenderProp) {
-      return (
-        <ServerStatus {...commonProps}>
-          {(snapshot) => {
-            // Update snapshot state
-            handleSnapshotChange(snapshot);
-            if (snapshot.status === "unknown" || snapshot.status === "checking") return null;
-            if (snapshot.status === "active" && !snapshot.wasCold) return null;
-
-            return (
-              <div
-                style={{
-                  padding: "10px 16px",
-                  borderRadius: "8px",
-                  margin: "8px 0",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  background:
-                    snapshot.status === "waking"
-                      ? "rgba(245, 158, 11, 0.15)"
-                      : snapshot.status === "active"
-                        ? "rgba(16, 185, 129, 0.15)"
-                        : "rgba(244, 63, 94, 0.15)",
-                  border: `1px solid ${
-                    snapshot.status === "waking"
-                      ? "rgba(245, 158, 11, 0.4)"
-                      : snapshot.status === "active"
-                        ? "rgba(16, 185, 129, 0.4)"
-                        : "rgba(244, 63, 94, 0.4)"
-                  }`,
-                  color: "var(--text-primary)",
-                  fontSize: "13px",
-                  fontWeight: 500,
-                }}
-              >
-                <span>
-                  {snapshot.status === "waking" &&
-                    `✨ Custom Render Prop: Waking Up (${snapshot.elapsedSeconds}s)`}
-                  {snapshot.status === "active" && "✨ Custom Render Prop: Server Online!"}
-                  {snapshot.status === "offline" && "✨ Custom Render Prop: Backend Offline"}
-                </span>
-                {snapshot.status === "offline" && (
-                  <button
-                    type="button"
-                    onClick={snapshot.refresh}
-                    style={{
-                      padding: "4px 10px",
-                      borderRadius: "4px",
-                      background: "var(--brand-500)",
-                      color: "white",
-                      border: "none",
-                      cursor: "pointer",
-                      fontSize: "12px",
-                    }}
-                  >
-                    Retry
-                  </button>
-                )}
-              </div>
-            );
-          }}
-        </ServerStatus>
-      );
-    }
-
-    return <ServerStatus {...commonProps} />;
-  };
 
   return (
     <div className="demo-container">
       <div className="app-bg-glow" />
 
-      {/* Header Bar */}
-      <HeaderNav backend={backend} onRemount={handleRemount} />
+      <HeaderNav />
 
-      {/* Fixed Top Indicator Slot */}
-      {config.position === "top-bar" && (
-        <div className="indicator-slot-top">{renderIndicator()}</div>
-      )}
-
-      {/* Main 2-Column Grid */}
-      <main className="demo-main-grid">
-        {/* Left Column: Pulse SaaS Application */}
-        <section className="app-shell-container">
-          {/* Embedded Indicator Slot */}
-          {config.position === "inside-header" && (
-            <div className="indicator-slot-inline">{renderIndicator()}</div>
-          )}
-
-          <PulseApp
-            backend={backend}
-            onRefreshTriggered={() => {
-              backend.triggerColdStart();
-              handleRemount();
-            }}
-          />
-        </section>
-
-        {/* Right Column: Interactive Control Center & Live Telemetry */}
-        <aside style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          <ControlPanel
-            config={config}
-            onConfigChange={handleConfigChange}
-            backend={backend}
-            onRemountRequired={handleRemount}
-            activeTab={activeControlTab}
-            onTabChange={setActiveControlTab}
-          />
-
-          <div className="control-center-card" style={{ padding: 20 }}>
-            <LiveInspector snapshot={currentSnapshot} events={events} config={config} />
-          </div>
-        </aside>
-      </main>
-
-      {/* Floating Bottom Right Indicator Slot */}
-      {config.position === "floating-bottom" && (
-        <div className="indicator-slot-floating">{renderIndicator()}</div>
-      )}
+      <ServerStatusProvider
+        key={`session-${sessionKey}`}
+        check={backend.check}
+        revealDelay={config.revealDelay}
+        pollInterval={config.pollInterval}
+        offlineAfter={config.offlineAfter}
+      >
+        <DemoContent
+          backend={backend}
+          config={config}
+          onConfigChange={handleConfigChange}
+          onRemount={handleRemount}
+          activeControlTab={activeControlTab}
+          onTabChange={setActiveControlTab}
+          events={events}
+          onRecordEvent={recordEvent}
+        />
+      </ServerStatusProvider>
     </div>
   );
 }
