@@ -100,11 +100,10 @@ export function useSimulatedBackend(
       }));
 
       if (elapsed >= configRef.current.wakeDuration) {
-        updateTelemetryState("ready");
         clearBootProgressInterval();
       }
     }, 100);
-  }, [clearBootProgressInterval, updateTelemetryState]);
+  }, [clearBootProgressInterval]);
 
   // Clean up on unmount
   useEffect(() => {

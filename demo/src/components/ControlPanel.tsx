@@ -37,6 +37,9 @@ export function ControlPanel({
 
   const handleTimingChange = (field: keyof DemoIndicatorConfig, value: number) => {
     onConfigChange({ [field]: value });
+  };
+
+  const handleTimingCommit = () => {
     onRemountRequired();
   };
 
@@ -50,55 +53,60 @@ export function ControlPanel({
   };
 
   return (
-    <div className="demo-sidebar">
+    <div className="control-panel-stack">
       {/* 1. Backend Simulation Card */}
       <div className="control-card">
         <div className="card-title-bar">
           <span className="card-title-heading">Backend Simulation</span>
+          <span className="card-title-sub">Host Sandbox</span>
         </div>
 
         <div className="card-body">
-          <div className="scenario-grid">
+          <div className="scenario-grid" role="group" aria-label="Backend simulation scenarios">
             <button
               type="button"
               className={`scenario-btn ${backend.config.mode === "cold-start" ? "active" : ""}`}
               onClick={() => handleScenarioClick(backend.triggerColdStart)}
+              aria-pressed={backend.config.mode === "cold-start"}
             >
               <div className="scenario-btn-top">
                 <SnowflakeIcon className="scenario-icon cold" />
                 <span className="scenario-title">Cold Start</span>
               </div>
-              <span className="scenario-desc">Sleeping backend wakes with countdown.</span>
+              <span className="scenario-desc">Simulates sleeping container waking up.</span>
             </button>
 
             <button
               type="button"
               className={`scenario-btn ${backend.config.mode === "warm-start" ? "active" : ""}`}
               onClick={() => handleScenarioClick(backend.triggerWarmStart)}
+              aria-pressed={backend.config.mode === "warm-start"}
             >
               <div className="scenario-btn-top">
                 <ZapIcon className="scenario-icon warm" />
                 <span className="scenario-title">Warm Start</span>
               </div>
-              <span className="scenario-desc">Fast 200 OK. Completely silent UI.</span>
+              <span className="scenario-desc">Instant 200 OK. UI stays 100% silent.</span>
             </button>
 
             <button
               type="button"
               className={`scenario-btn ${backend.config.mode === "server-error" ? "active" : ""}`}
               onClick={() => handleScenarioClick(backend.triggerServerError)}
+              aria-pressed={backend.config.mode === "server-error"}
             >
               <div className="scenario-btn-top">
                 <AlertTriangleIcon className="scenario-icon error" />
                 <span className="scenario-title">Server 503</span>
               </div>
-              <span className="scenario-desc">Host failure with Retry button.</span>
+              <span className="scenario-desc">Simulates host crash with Retry action.</span>
             </button>
 
             <button
               type="button"
               className={`scenario-btn ${backend.config.mode === "browser-offline" ? "active" : ""}`}
               onClick={() => handleScenarioClick(backend.triggerBrowserOffline)}
+              aria-pressed={backend.config.mode === "browser-offline"}
             >
               <div className="scenario-btn-top">
                 <WifiOffIcon className="scenario-icon offline" />
@@ -110,10 +118,11 @@ export function ControlPanel({
 
           <div className="control-group">
             <div className="control-label-row">
-              <span>Wake Duration</span>
+              <label htmlFor="wake-duration-slider">Wake Cycle Duration</label>
               <span className="control-val-badge">{backend.config.wakeDuration / 1000}s</span>
             </div>
             <input
+              id="wake-duration-slider"
               type="range"
               className="range-input"
               min="2000"
@@ -121,42 +130,48 @@ export function ControlPanel({
               step="500"
               value={backend.config.wakeDuration}
               onChange={(e) => backend.updateConfig({ wakeDuration: Number(e.target.value) })}
+              aria-label="Wake Cycle Duration in seconds"
             />
           </div>
 
           <div className="control-group">
             <div className="control-label-row">
-              <span>Simulated Latency</span>
+              <label htmlFor="latency-slider">Network Roundtrip Latency</label>
               <span className="control-val-badge">{backend.config.latency}ms</span>
             </div>
             <input
+              id="latency-slider"
               type="range"
               className="range-input"
-              min="50"
+              min="30"
               max="1500"
-              step="50"
+              step="30"
               value={backend.config.latency}
               onChange={(e) => backend.updateConfig({ latency: Number(e.target.value) })}
+              aria-label="Network roundtrip latency in milliseconds"
             />
           </div>
         </div>
       </div>
 
-      {/* 2. Indicator Configuration (Single Natural Flow with Progressive Disclosure) */}
+      {/* 2. Indicator Configuration */}
       <div className="control-card">
         <div className="card-title-bar">
           <span className="card-title-heading">Indicator Options</span>
+          <span className="card-title-sub">Props Config</span>
         </div>
 
         <div className="card-body">
-          {/* Tier 1: Primary Essentials */}
+          {/* Primary Controls */}
           <div className="control-group">
             <div className="control-label-row">
               <span>Visual Variant</span>
             </div>
-            <div className="segmented-control">
+            <div className="segmented-control" role="tablist" aria-label="Visual Variant">
               <button
                 type="button"
+                role="tab"
+                aria-selected={config.variant === "banner"}
                 className={`segment-btn ${config.variant === "banner" ? "active" : ""}`}
                 onClick={() => onConfigChange({ variant: "banner" })}
               >
@@ -164,6 +179,8 @@ export function ControlPanel({
               </button>
               <button
                 type="button"
+                role="tab"
+                aria-selected={config.variant === "pill"}
                 className={`segment-btn ${config.variant === "pill" ? "active" : ""}`}
                 onClick={() => onConfigChange({ variant: "pill" })}
               >
@@ -174,9 +191,10 @@ export function ControlPanel({
 
           <div className="control-group">
             <div className="control-label-row">
-              <span>Placement</span>
+              <label htmlFor="placement-select">Placement Mode</label>
             </div>
             <select
+              id="placement-select"
               className="select-input"
               value={config.position}
               onChange={(e) =>
@@ -186,37 +204,42 @@ export function ControlPanel({
               }
             >
               <option value="top-bar">Fixed Top of Page</option>
-              <option value="inside-header">Embedded Above App Card</option>
+              <option value="inside-header">Embedded in App Console Header</option>
               <option value="floating-bottom">Floating Bottom-Right Badge</option>
             </select>
           </div>
 
-          {/* Tier 2: Timing Thresholds */}
+          {/* Timing Thresholds with commit-on-release */}
           <div className="control-group">
             <div className="control-label-row">
-              <span>Reveal Delay (revealDelay)</span>
+              <label htmlFor="reveal-delay-slider">Reveal Threshold (revealDelay)</label>
               <span className="control-val-badge">{config.revealDelay / 1000}s</span>
             </div>
             <input
+              id="reveal-delay-slider"
               type="range"
               className="range-input"
               min="500"
-              max="10000"
-              step="500"
+              max="8000"
+              step="250"
               value={config.revealDelay}
               onChange={(e) => handleTimingChange("revealDelay", Number(e.target.value))}
+              onPointerUp={handleTimingCommit}
+              onKeyUp={handleTimingCommit}
+              aria-label="Reveal threshold in seconds"
             />
             <span className="control-helper-text">
-              Suppresses UI on fast responses so warm starts stay silent.
+              Suppresses UI on fast responses so warm starts stay completely silent.
             </span>
           </div>
 
           <div className="control-group">
             <div className="control-label-row">
-              <span>Poll Interval (pollInterval)</span>
+              <label htmlFor="poll-interval-slider">Poll Interval (pollInterval)</label>
               <span className="control-val-badge">{config.pollInterval / 1000}s</span>
             </div>
             <input
+              id="poll-interval-slider"
               type="range"
               className="range-input"
               min="1000"
@@ -224,30 +247,42 @@ export function ControlPanel({
               step="500"
               value={config.pollInterval}
               onChange={(e) => handleTimingChange("pollInterval", Number(e.target.value))}
+              onPointerUp={handleTimingCommit}
+              onKeyUp={handleTimingCommit}
+              aria-label="Poll interval in seconds"
             />
           </div>
 
-          {/* Tier 3: Advanced Options (Collapsible) */}
+          {/* Advanced Policies (Collapsible Accordion) */}
           <div className="disclosure-section">
             <button
               type="button"
               className="disclosure-trigger"
               onClick={() => setShowAdvanced((prev) => !prev)}
+              aria-expanded={showAdvanced}
+              aria-controls="advanced-policies-body"
             >
-              <span>Advanced Policies</span>
-              <span className={`disclosure-chevron ${showAdvanced ? "open" : ""}`}>
+              <span>Advanced Timing & Policies</span>
+              <span
+                className={`disclosure-chevron ${showAdvanced ? "open" : ""}`}
+                aria-hidden="true"
+              >
                 <ChevronDownIcon />
               </span>
             </button>
 
-            {showAdvanced && (
+            <div
+              id="advanced-policies-body"
+              className={`disclosure-wrapper ${showAdvanced ? "open" : ""}`}
+            >
               <div className="disclosure-body">
                 <div className="control-group">
                   <div className="control-label-row">
-                    <span>Offline Cutoff (offlineAfter)</span>
+                    <label htmlFor="offline-after-slider">Offline Cutoff (offlineAfter)</label>
                     <span className="control-val-badge">{config.offlineAfter / 1000}s</span>
                   </div>
                   <input
+                    id="offline-after-slider"
                     type="range"
                     className="range-input"
                     min="10000"
@@ -255,18 +290,22 @@ export function ControlPanel({
                     step="5000"
                     value={config.offlineAfter}
                     onChange={(e) => handleTimingChange("offlineAfter", Number(e.target.value))}
+                    onPointerUp={handleTimingCommit}
+                    onKeyUp={handleTimingCommit}
+                    aria-label="Offline cutoff threshold in seconds"
                   />
                   <span className="control-helper-text">
-                    Max waking elapsed time before failing over to offline.
+                    Max waking duration before automatically transitioning to offline.
                   </span>
                 </div>
 
                 <div className="control-group">
                   <div className="control-label-row">
-                    <span>Active Toast Duration</span>
+                    <label htmlFor="success-display-slider">Active Toast Duration</label>
                     <span className="control-val-badge">{config.successDisplayMs / 1000}s</span>
                   </div>
                   <input
+                    id="success-display-slider"
                     type="range"
                     className="range-input"
                     min="500"
@@ -274,6 +313,7 @@ export function ControlPanel({
                     step="500"
                     value={config.successDisplayMs}
                     onChange={(e) => onConfigChange({ successDisplayMs: Number(e.target.value) })}
+                    aria-label="Active toast duration in seconds"
                   />
                 </div>
 
@@ -285,34 +325,37 @@ export function ControlPanel({
                       onChange={(e) => onConfigChange({ useRenderProp: e.target.checked })}
                     />
                     <span>
-                      Custom render prop (<code>children=&#123;fn&#125;</code>)
+                      Headless render prop (<code>children=&#123;fn&#125;</code>)
                     </span>
                   </label>
                 </div>
               </div>
-            )}
+            </div>
           </div>
 
-          {/* Tier 4: Copy & Localization (Collapsible) */}
+          {/* Copy & Localization (Collapsible Accordion) */}
           <div className="disclosure-section">
             <button
               type="button"
               className="disclosure-trigger"
               onClick={() => setShowCopy((prev) => !prev)}
+              aria-expanded={showCopy}
+              aria-controls="custom-copy-body"
             >
-              <span>Custom Text & i18n</span>
-              <span className={`disclosure-chevron ${showCopy ? "open" : ""}`}>
+              <span>Custom Text & Localization</span>
+              <span className={`disclosure-chevron ${showCopy ? "open" : ""}`} aria-hidden="true">
                 <ChevronDownIcon />
               </span>
             </button>
 
-            {showCopy && (
+            <div id="custom-copy-body" className={`disclosure-wrapper ${showCopy ? "open" : ""}`}>
               <div className="disclosure-body">
                 <div className="control-group">
-                  <label className="control-label-row">
+                  <label className="control-label-row" htmlFor="msg-waking">
                     <span>Waking Message</span>
                   </label>
                   <input
+                    id="msg-waking"
                     type="text"
                     className="text-input"
                     placeholder="The server is starting up..."
@@ -322,10 +365,11 @@ export function ControlPanel({
                 </div>
 
                 <div className="control-group">
-                  <label className="control-label-row">
-                    <span>Active Message</span>
+                  <label className="control-label-row" htmlFor="msg-active">
+                    <span>Active Confirmation</span>
                   </label>
                   <input
+                    id="msg-active"
                     type="text"
                     className="text-input"
                     placeholder="The server is ready."
@@ -335,10 +379,11 @@ export function ControlPanel({
                 </div>
 
                 <div className="control-group">
-                  <label className="control-label-row">
-                    <span>Offline Message</span>
+                  <label className="control-label-row" htmlFor="msg-offline">
+                    <span>Offline Alert</span>
                   </label>
                   <input
+                    id="msg-offline"
                     type="text"
                     className="text-input"
                     placeholder="The server appears to be unavailable."
@@ -348,23 +393,11 @@ export function ControlPanel({
                 </div>
 
                 <div className="control-group">
-                  <label className="control-label-row">
-                    <span>Browser Offline Message</span>
+                  <label className="control-label-row" htmlFor="msg-retry">
+                    <span>Retry Button Text</span>
                   </label>
                   <input
-                    type="text"
-                    className="text-input"
-                    placeholder="You appear to be offline..."
-                    value={config.messages.browserOffline || ""}
-                    onChange={(e) => handleMessageChange("browserOffline", e.target.value)}
-                  />
-                </div>
-
-                <div className="control-group">
-                  <label className="control-label-row">
-                    <span>Retry Label</span>
-                  </label>
-                  <input
+                    id="msg-retry"
                     type="text"
                     className="text-input"
                     placeholder="Retry"
@@ -373,7 +406,7 @@ export function ControlPanel({
                   />
                 </div>
               </div>
-            )}
+            </div>
           </div>
         </div>
       </div>

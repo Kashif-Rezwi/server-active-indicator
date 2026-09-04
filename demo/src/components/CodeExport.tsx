@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { DemoIndicatorConfig } from "./ControlPanel";
-import { CheckIcon, CodeIcon } from "./Icons";
+import { CheckIcon, CodeIcon, CopyIcon } from "./Icons";
 
 export type IntegrationMode = "react-component" | "react-hook" | "next" | "vanilla";
 
@@ -133,20 +133,89 @@ const unsubscribe = monitor.subscribe(({ status, elapsedSeconds }) => {
   }
 });
 
-// Immediate manual recheck (e.g. on Retry button click):
+// Immediate manual recheck (e.g. on Retry click):
 // monitor.refresh();
 
-// Teardown when unmounting / navigating:
+// Teardown when unmounting:
 // unsubscribe();
 // monitor.destroy();`;
       }
     }
   };
 
+  const codeText = generateCode();
+
   const handleCopyCode = async () => {
-    await navigator.clipboard.writeText(generateCode());
+    await navigator.clipboard.writeText(codeText);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  // Simple token highlighter that wraps keywords, strings, comments, and tags
+  const renderHighlightedCode = (rawCode: string) => {
+    const lines = rawCode.split("\n");
+    return lines.map((line, lineIdx) => {
+      // Check for comments
+      if (line.trim().startsWith("//")) {
+        return (
+          <div key={lineIdx} className="code-line">
+            <span className="token-comment">{line}</span>
+          </div>
+        );
+      }
+
+      // Tokenize line with basic regex
+      const parts = line.split(
+        /(\bimport\b|\bfrom\b|\bexport\b|\bfunction\b|\bconst\b|\breturn\b|\bif\b|\bnull\b|\btype\b|'use client'|"[^"]*"|'[^']*'|`[^`]*`|<[A-Za-z0-9_]+|<\/[A-Za-z0-9_]+|\/>|>)/g,
+      );
+
+      return (
+        <div key={lineIdx} className="code-line">
+          {parts.map((part, partIdx) => {
+            if (!part) return null;
+            if (
+              [
+                "import",
+                "from",
+                "export",
+                "function",
+                "const",
+                "return",
+                "if",
+                "null",
+                "type",
+                "'use client'",
+              ].includes(part)
+            ) {
+              return (
+                <span key={partIdx} className="token-keyword">
+                  {part}
+                </span>
+              );
+            }
+            if (
+              (part.startsWith('"') && part.endsWith('"')) ||
+              (part.startsWith("'") && part.endsWith("'")) ||
+              (part.startsWith("`") && part.endsWith("`"))
+            ) {
+              return (
+                <span key={partIdx} className="token-string">
+                  {part}
+                </span>
+              );
+            }
+            if (part.startsWith("<") || part === "/>" || part === ">") {
+              return (
+                <span key={partIdx} className="token-tag">
+                  {part}
+                </span>
+              );
+            }
+            return <span key={partIdx}>{part}</span>;
+          })}
+        </div>
+      );
+    });
   };
 
   return (
@@ -157,54 +226,68 @@ const unsubscribe = monitor.subscribe(({ status, elapsedSeconds }) => {
           <span className="card-title-heading">Integration Code</span>
         </div>
 
-        <div className="framework-segmented-bar">
-          <button
-            type="button"
-            className={`framework-pill ${mode === "react-component" ? "active" : ""}`}
-            onClick={() => setMode("react-component")}
-          >
-            React Component
-          </button>
-          <button
-            type="button"
-            className={`framework-pill ${mode === "react-hook" ? "active" : ""}`}
-            onClick={() => setMode("react-hook")}
-          >
-            React Hook (Headless)
-          </button>
-          <button
-            type="button"
-            className={`framework-pill ${mode === "next" ? "active" : ""}`}
-            onClick={() => setMode("next")}
-          >
-            Next.js
-          </button>
-          <button
-            type="button"
-            className={`framework-pill ${mode === "vanilla" ? "active" : ""}`}
-            onClick={() => setMode("vanilla")}
-          >
-            Vanilla JS
-          </button>
-        </div>
-      </div>
-
-      <div className="code-snippet-box">
         <button
           type="button"
           className="copy-code-btn"
           onClick={handleCopyCode}
           title="Copy code snippet to clipboard"
+          aria-label="Copy code snippet"
         >
           {copied ? (
             <>
-              <CheckIcon /> Copied
+              <CheckIcon />
+              <span>Copied!</span>
             </>
           ) : (
-            "Copy Code"
+            <>
+              <CopyIcon />
+              <span>Copy Code</span>
+            </>
           )}
         </button>
-        <pre>{generateCode()}</pre>
+      </div>
+
+      <div className="framework-tabs-bar" role="tablist" aria-label="Integration Framework">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={mode === "react-component"}
+          className={`framework-pill ${mode === "react-component" ? "active" : ""}`}
+          onClick={() => setMode("react-component")}
+        >
+          React Component
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={mode === "react-hook"}
+          className={`framework-pill ${mode === "react-hook" ? "active" : ""}`}
+          onClick={() => setMode("react-hook")}
+        >
+          useServerStatus Hook
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={mode === "next"}
+          className={`framework-pill ${mode === "next" ? "active" : ""}`}
+          onClick={() => setMode("next")}
+        >
+          Next.js
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={mode === "vanilla"}
+          className={`framework-pill ${mode === "vanilla" ? "active" : ""}`}
+          onClick={() => setMode("vanilla")}
+        >
+          Vanilla JS
+        </button>
+      </div>
+
+      <div className="code-snippet-box">
+        <pre className="code-snippet-pre">{renderHighlightedCode(codeText)}</pre>
       </div>
     </div>
   );

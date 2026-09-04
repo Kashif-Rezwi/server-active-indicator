@@ -74,6 +74,7 @@ interface DemoContentProps {
   onRemount: () => void;
   events: Array<{ timestamp: string; state: string; details: string }>;
   onRecordEvent: (state: string, details: string) => void;
+  onClearEvents: () => void;
 }
 
 function DemoContent({
@@ -83,6 +84,7 @@ function DemoContent({
   onRemount,
   events,
   onRecordEvent,
+  onClearEvents,
 }: DemoContentProps) {
   const snapshot = useServerStatus();
   const lastStateRef = useRef<string>("unknown");
@@ -96,7 +98,7 @@ function DemoContent({
             ? `Backend ready in ${snapshot.lastLatencyMs || 0}ms (attempts: ${snapshot.attempts})`
             : snapshot.status === "offline"
               ? `Unavailable (${snapshot.offlineKind || "server error"})`
-              : "Checking health probe";
+              : "Checking server status";
 
       onRecordEvent(snapshot.status, detail);
       lastStateRef.current = snapshot.status;
@@ -114,36 +116,38 @@ function DemoContent({
     <>
       {/* Fixed Top Indicator Slot */}
       {config.position === "top-bar" && (
-        <div className="indicator-slot-top">
+        <div className="indicator-slot-top" role="region" aria-label="Server status alert">
           <IndicatorSlot config={config} />
         </div>
       )}
 
-      {/* Main 2-Column Grid */}
+      {/* Main 2-Column Grid (Left: Main stage + Inspector + Integration Code; Right: Sidebar controls) */}
       <main className="demo-main-grid">
-        {/* Left Column: Pulse SaaS App + Runtime Telemetry + Code Integration */}
+        {/* Left Column: Pulse Console + State Machine Telemetry + Integration Code */}
         <section className="app-shell-container">
-          {/* Embedded Indicator Slot */}
-          {config.position === "inside-header" && (
-            <div className="indicator-slot-inline">
-              <IndicatorSlot config={config} />
-            </div>
-          )}
-
           <PulseApp
             backend={backend}
+            snapshot={snapshot}
             onRefreshTriggered={() => {
               backend.triggerColdStart();
               onRemount();
             }}
+            revealDelay={config.revealDelay}
+            headerSlot={
+              config.position === "inside-header" ? (
+                <div className="indicator-slot-inline">
+                  <IndicatorSlot config={config} />
+                </div>
+              ) : undefined
+            }
           />
 
-          <LiveInspector snapshot={snapshot} events={events} />
+          <LiveInspector snapshot={snapshot} events={events} onClearEvents={onClearEvents} />
 
           <CodeExport config={config} />
         </section>
 
-        {/* Right Column: Control Sidebar (Simulation + Ranked Options) */}
+        {/* Right Column: Control Sidebar */}
         <aside className="demo-sidebar">
           <ControlPanel
             config={config}
@@ -156,7 +160,7 @@ function DemoContent({
 
       {/* Floating Bottom Right Indicator Slot */}
       {config.position === "floating-bottom" && (
-        <div className="indicator-slot-floating">
+        <div className="indicator-slot-floating" role="region" aria-label="Floating server status">
           <IndicatorSlot config={config} />
         </div>
       )}
@@ -184,12 +188,16 @@ export function App() {
     const now = new Date();
     const timeStr =
       now.toTimeString().split(" ")[0] + "." + String(now.getMilliseconds()).padStart(3, "0");
-    setEvents((prev) => [{ timestamp: timeStr, state, details }, ...prev.slice(0, 9)]);
+    setEvents((prev) => [{ timestamp: timeStr, state, details }, ...prev.slice(0, 19)]);
+  }, []);
+
+  const handleClearEvents = useCallback(() => {
+    setEvents([]);
   }, []);
 
   return (
     <div className="demo-container">
-      <div className="app-bg-glow" />
+      <div className="app-bg-glow" aria-hidden="true" />
 
       <HeaderNav />
 
@@ -207,6 +215,7 @@ export function App() {
           onRemount={handleRemount}
           events={events}
           onRecordEvent={recordEvent}
+          onClearEvents={handleClearEvents}
         />
       </ServerStatusProvider>
     </div>
