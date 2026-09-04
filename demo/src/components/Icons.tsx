@@ -424,8 +424,8 @@ export function ClockIcon(props: SVGProps<SVGSVGElement>) {
 export function SunIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <svg
-      width="16"
-      height="16"
+      width="20"
+      height="20"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -451,8 +451,8 @@ export function SunIcon(props: SVGProps<SVGSVGElement>) {
 export function MoonIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <svg
-      width="16"
-      height="16"
+      width="20"
+      height="20"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"

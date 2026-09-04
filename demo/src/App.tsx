@@ -75,6 +75,8 @@ interface DemoContentProps {
   events: Array<{ timestamp: string; state: string; details: string }>;
   onRecordEvent: (state: string, details: string) => void;
   onClearEvents: () => void;
+  controlsOpen: boolean;
+  onCloseControls: () => void;
 }
 
 function DemoContent({
@@ -85,6 +87,8 @@ function DemoContent({
   events,
   onRecordEvent,
   onClearEvents,
+  controlsOpen,
+  onCloseControls,
 }: DemoContentProps) {
   const snapshot = useServerStatus();
   const lastStateRef = useRef<string>("unknown");
@@ -147,8 +151,12 @@ function DemoContent({
           <CodeExport config={config} />
         </section>
 
-        {/* Right Column: Control Sidebar */}
-        <aside className="demo-sidebar">
+        {/* Right Column: Control Sidebar (becomes a right drawer on small screens) */}
+        <aside
+          id="demo-sidebar"
+          className={`demo-sidebar ${controlsOpen ? "open" : ""}`}
+          aria-label="Demo controls"
+        >
           <ControlPanel
             config={config}
             onConfigChange={onConfigChange}
@@ -157,6 +165,11 @@ function DemoContent({
           />
         </aside>
       </main>
+
+      {/* Backdrop for the small-screen controls drawer */}
+      {controlsOpen && (
+        <div className="sidebar-backdrop" onClick={onCloseControls} aria-hidden="true" />
+      )}
 
       {/* Floating Bottom Right Indicator Slot */}
       {config.position === "floating-bottom" && (
@@ -172,6 +185,7 @@ export function App() {
   const backend = useSimulatedBackend();
   const [config, setConfig] = useState<DemoIndicatorConfig>(INITIAL_DEMO_CONFIG);
   const [sessionKey, setSessionKey] = useState(0);
+  const [controlsOpen, setControlsOpen] = useState(false);
   const [events, setEvents] = useState<
     Array<{ timestamp: string; state: string; details: string }>
   >([]);
@@ -195,11 +209,30 @@ export function App() {
     setEvents([]);
   }, []);
 
+  // Close the small-screen controls drawer with Escape
+  useEffect(() => {
+    if (!controlsOpen) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setControlsOpen(false);
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [controlsOpen]);
+
+  // Lock page scroll while the drawer is open (only takes effect <= 1100px, via CSS)
+  useEffect(() => {
+    document.body.classList.toggle("controls-open", controlsOpen);
+    return () => document.body.classList.remove("controls-open");
+  }, [controlsOpen]);
+
   return (
     <div className="demo-container">
       <div className="app-bg-glow" aria-hidden="true" />
 
-      <HeaderNav />
+      <HeaderNav
+        controlsOpen={controlsOpen}
+        onToggleControls={() => setControlsOpen((open) => !open)}
+      />
 
       <ServerStatusProvider
         key={`session-${sessionKey}`}
@@ -216,6 +249,8 @@ export function App() {
           events={events}
           onRecordEvent={recordEvent}
           onClearEvents={handleClearEvents}
+          controlsOpen={controlsOpen}
+          onCloseControls={() => setControlsOpen(false)}
         />
       </ServerStatusProvider>
     </div>

@@ -61,6 +61,15 @@
   --color-cold: #38bdf8;
   --color-cold-bg: rgba(56, 189, 248, 0.14);
 
+  /* RGB triplets for derived alpha tints (hover glows, borders, gradients).
+     Keep in sync with the semantic colors above so every tint matches its
+     token and adapts when the light theme overrides the palette. */
+  --brand-rgb: 99, 102, 241;
+  --success-rgb: 16, 185, 129;
+  --warning-rgb: 245, 158, 11;
+  --danger-rgb: 244, 63, 94;
+  --cold-rgb: 56, 189, 248;
+
   /* Radii */
   --radius-sm: 6px;
   --radius-md: 10px;
@@ -126,6 +135,12 @@
   --color-danger-bg: rgba(225, 29, 72, 0.09);
   --color-cold: #0284c7;
   --color-cold-bg: rgba(2, 132, 199, 0.1);
+
+  --brand-rgb: 99, 102, 241;
+  --success-rgb: 5, 150, 105;
+  --warning-rgb: 217, 119, 6;
+  --danger-rgb: 225, 29, 72;
+  --cold-rgb: 2, 132, 199;
 
   --shadow-sm: 0 1px 2px 0 rgba(15, 23, 42, 0.08);
   --shadow-md: 0 4px 16px -2px rgba(15, 23, 42, 0.1);
@@ -256,14 +271,11 @@ body {
 .brand-icon {
   color: var(--brand-400);
   flex-shrink: 0;
-  transition:
-    transform 0.25s ease,
-    color 0.25s ease;
+  transition: color 0.25s ease;
 }
 
 .brand-section:hover .brand-icon {
   color: var(--brand-500);
-  transform: rotate(20deg);
 }
 
 .brand-title {
@@ -497,6 +509,15 @@ body {
     right: var(--space-4);
     bottom: var(--space-4);
     max-width: none;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
   }
 }
 
@@ -830,19 +851,19 @@ body {
 }
 
 .silence-demonstrator.ready {
-  border-color: rgba(16, 185, 129, 0.3);
-  background: linear-gradient(180deg, rgba(16, 185, 129, 0.05) 0%, var(--bg-surface) 100%);
+  border-color: rgba(var(--success-rgb), 0.3);
+  background: linear-gradient(180deg, rgba(var(--success-rgb), 0.05) 0%, var(--bg-surface) 100%);
 }
 
 .silence-demonstrator.booting {
-  border-color: rgba(245, 158, 11, 0.3);
-  background: linear-gradient(180deg, rgba(245, 158, 11, 0.05) 0%, var(--bg-surface) 100%);
+  border-color: rgba(var(--warning-rgb), 0.3);
+  background: linear-gradient(180deg, rgba(var(--warning-rgb), 0.05) 0%, var(--bg-surface) 100%);
 }
 
 .silence-demonstrator.crashed,
 .silence-demonstrator.disconnected {
-  border-color: rgba(239, 68, 68, 0.3);
-  background: linear-gradient(180deg, rgba(239, 68, 68, 0.05) 0%, var(--bg-surface) 100%);
+  border-color: rgba(var(--danger-rgb), 0.3);
+  background: linear-gradient(180deg, rgba(var(--danger-rgb), 0.05) 0%, var(--bg-surface) 100%);
 }
 
 .silence-demo-header {
@@ -883,25 +904,25 @@ body {
   padding: 1px 7px;
   border-radius: var(--radius-sm);
   background: var(--brand-glow);
-  border: 1px solid rgba(99, 102, 241, 0.35);
+  border: 1px solid rgba(var(--brand-rgb), 0.35);
   color: var(--brand-400);
 }
 
 .silence-state-chip.ready {
   background: var(--color-success-bg);
-  border-color: rgba(16, 185, 129, 0.3);
+  border-color: rgba(var(--success-rgb), 0.3);
   color: var(--color-success);
 }
 
 .silence-state-chip.waking {
   background: var(--color-warning-bg);
-  border-color: rgba(245, 158, 11, 0.3);
+  border-color: rgba(var(--warning-rgb), 0.3);
   color: var(--color-warning);
 }
 
 .silence-state-chip.danger {
   background: var(--color-danger-bg);
-  border-color: rgba(239, 68, 68, 0.3);
+  border-color: rgba(var(--danger-rgb), 0.3);
   color: var(--color-danger);
 }
 
@@ -1316,28 +1337,54 @@ body {
   transform: translateY(-1px);
 }
 
+/* Per-variant hover: tint each scenario button with its own accent color
+   (inactive buttons only — the .active state keeps its stronger styling) */
+.scenario-btn:not(.active).cold:hover {
+  border-color: rgba(var(--cold-rgb), 0.55);
+  background: rgba(var(--cold-rgb), 0.08);
+  box-shadow: 0 0 10px rgba(var(--cold-rgb), 0.12);
+}
+
+.scenario-btn:not(.active).warm:hover {
+  border-color: rgba(var(--success-rgb), 0.55);
+  background: rgba(var(--success-rgb), 0.08);
+  box-shadow: 0 0 10px rgba(var(--success-rgb), 0.12);
+}
+
+.scenario-btn:not(.active).error:hover {
+  border-color: rgba(var(--danger-rgb), 0.55);
+  background: rgba(var(--danger-rgb), 0.08);
+  box-shadow: 0 0 10px rgba(var(--danger-rgb), 0.12);
+}
+
+.scenario-btn:not(.active).offline:hover {
+  border-color: rgba(var(--warning-rgb), 0.55);
+  background: rgba(var(--warning-rgb), 0.08);
+  box-shadow: 0 0 10px rgba(var(--warning-rgb), 0.12);
+}
+
 .scenario-btn.active.cold {
-  border-color: rgba(56, 189, 248, 0.6);
-  background: rgba(56, 189, 248, 0.08);
-  box-shadow: 0 0 10px rgba(56, 189, 248, 0.15);
+  border-color: rgba(var(--cold-rgb), 0.6);
+  background: rgba(var(--cold-rgb), 0.08);
+  box-shadow: 0 0 10px rgba(var(--cold-rgb), 0.15);
 }
 
 .scenario-btn.active.warm {
-  border-color: rgba(52, 211, 153, 0.6);
-  background: rgba(52, 211, 153, 0.08);
-  box-shadow: 0 0 10px rgba(52, 211, 153, 0.15);
+  border-color: rgba(var(--success-rgb), 0.6);
+  background: rgba(var(--success-rgb), 0.08);
+  box-shadow: 0 0 10px rgba(var(--success-rgb), 0.15);
 }
 
 .scenario-btn.active.error {
-  border-color: rgba(248, 113, 113, 0.6);
-  background: rgba(248, 113, 113, 0.08);
-  box-shadow: 0 0 10px rgba(248, 113, 113, 0.15);
+  border-color: rgba(var(--danger-rgb), 0.6);
+  background: rgba(var(--danger-rgb), 0.08);
+  box-shadow: 0 0 10px rgba(var(--danger-rgb), 0.15);
 }
 
 .scenario-btn.active.offline {
-  border-color: rgba(251, 191, 36, 0.6);
-  background: rgba(251, 191, 36, 0.08);
-  box-shadow: 0 0 10px rgba(251, 191, 36, 0.15);
+  border-color: rgba(var(--warning-rgb), 0.6);
+  background: rgba(var(--warning-rgb), 0.08);
+  box-shadow: 0 0 10px rgba(var(--warning-rgb), 0.15);
 }
 
 .scenario-icon {
@@ -1430,10 +1477,10 @@ body {
   font-size: 11px;
   font-weight: 600;
   color: var(--brand-400);
-  background: rgba(99, 102, 241, 0.12);
+  background: rgba(var(--brand-rgb), 0.12);
   padding: 1px 7px;
   border-radius: var(--radius-sm);
-  border: 1px solid rgba(99, 102, 241, 0.25);
+  border: 1px solid rgba(var(--brand-rgb), 0.25);
 }
 
 .control-helper-text {
@@ -1515,6 +1562,11 @@ body {
   transition: border-color 0.15s ease;
 }
 
+/* Match the select chevron to the light theme's secondary text color */
+:root[data-theme="light"] .select-input {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+}
+
 .text-input {
   width: 100%;
   padding: 7px 11px;
@@ -1577,7 +1629,7 @@ body {
 }
 
 .disclosure-section.open {
-  border-color: rgba(99, 102, 241, 0.25);
+  border-color: rgba(var(--brand-rgb), 0.25);
   background: var(--surface-open);
 }
 
@@ -1627,9 +1679,9 @@ body {
   font-weight: 600;
   padding: 1px 6px;
   border-radius: var(--radius-sm);
-  background: rgba(99, 102, 241, 0.12);
+  background: rgba(var(--brand-rgb), 0.12);
   color: var(--brand-400);
-  border: 1px solid rgba(99, 102, 241, 0.25);
+  border: 1px solid rgba(var(--brand-rgb), 0.25);
 }
 
 .disclosure-chevron {
@@ -1897,18 +1949,18 @@ body {
 }
 
 .custom-render-prop-banner.waking {
-  background: rgba(245, 158, 11, 0.15);
-  border: 1px solid rgba(245, 158, 11, 0.4);
+  background: rgba(var(--warning-rgb), 0.15);
+  border: 1px solid rgba(var(--warning-rgb), 0.4);
 }
 
 .custom-render-prop-banner.active {
-  background: rgba(16, 185, 129, 0.15);
-  border: 1px solid rgba(16, 185, 129, 0.4);
+  background: rgba(var(--success-rgb), 0.15);
+  border: 1px solid rgba(var(--success-rgb), 0.4);
 }
 
 .custom-render-prop-banner.offline {
-  background: rgba(244, 63, 94, 0.15);
-  border: 1px solid rgba(244, 63, 94, 0.4);
+  background: rgba(var(--danger-rgb), 0.15);
+  border: 1px solid rgba(var(--danger-rgb), 0.4);
 }
 
 .custom-render-prop-retry {
@@ -1925,4 +1977,65 @@ body {
 
 .custom-render-prop-retry:hover {
   background: var(--brand-600);
+}
+
+/* ============================================================
+   Small-Screen Controls Drawer (<= 1100px)
+   The control sidebar becomes an off-canvas right drawer so the
+   main stage stays front-and-center on smaller screens. The
+   desktop layout is completely untouched.
+   ============================================================ */
+
+.controls-toggle {
+  display: none;
+}
+
+.sidebar-backdrop {
+  position: fixed;
+  inset: 0;
+  /* Below the fixed header (z-index 100) so its buttons stay usable */
+  z-index: 95;
+  background: rgba(0, 0, 0, 0.45);
+  animation: fadeIn 0.2s ease;
+}
+
+@media (min-width: 1101px) {
+  .sidebar-backdrop {
+    display: none;
+  }
+}
+
+@media (max-width: 1100px) {
+  .controls-toggle {
+    display: inline-flex;
+  }
+
+  body.controls-open {
+    overflow: hidden;
+  }
+
+  .demo-sidebar {
+    position: fixed;
+    top: 56px;
+    right: 0;
+    bottom: 0;
+    width: min(400px, calc(100vw - 48px));
+    z-index: 110;
+    padding: var(--space-4);
+    background: var(--bg-app);
+    border-left: 1px solid var(--border-subtle);
+    box-shadow: var(--shadow-lg);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    transform: translateX(100%);
+    visibility: hidden;
+    transition:
+      transform 0.25s ease,
+      visibility 0.25s ease;
+  }
+
+  .demo-sidebar.open {
+    transform: translateX(0);
+    visibility: visible;
+  }
 }

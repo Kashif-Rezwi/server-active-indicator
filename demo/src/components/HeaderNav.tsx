@@ -1,8 +1,13 @@
 import { useState } from "react";
 import { useTheme } from "../hooks/useTheme";
-import { CheckIcon, CopyIcon, GitHubIcon, MoonIcon, NpmIcon, SunIcon } from "./Icons";
+import { CheckIcon, CopyIcon, GitHubIcon, MoonIcon, NpmIcon, SlidersIcon, SunIcon } from "./Icons";
 
-export function HeaderNav() {
+interface HeaderNavProps {
+  controlsOpen: boolean;
+  onToggleControls: () => void;
+}
+
+export function HeaderNav({ controlsOpen, onToggleControls }: HeaderNavProps) {
   const [copied, setCopied] = useState(false);
   const { theme, toggleTheme } = useTheme();
 
@@ -15,7 +20,7 @@ export function HeaderNav() {
   return (
     <header className="demo-header">
       <div className="demo-header-inner">
-        <div className="brand-section">
+        <div className="brand-section" title="server-active-indicator">
           <svg
             className="brand-icon"
             width="20"
@@ -93,6 +98,19 @@ export function HeaderNav() {
           >
             <GitHubIcon />
           </a>
+
+          {/* Controls drawer toggle — only visible on small screens (CSS-gated) */}
+          <button
+            type="button"
+            className="header-icon-link controls-toggle"
+            onClick={onToggleControls}
+            title={controlsOpen ? "Close controls panel" : "Open controls panel"}
+            aria-label={controlsOpen ? "Close controls panel" : "Open controls panel"}
+            aria-expanded={controlsOpen}
+            aria-controls="demo-sidebar"
+          >
+            <SlidersIcon width={20} height={20} />
+          </button>
         </div>
       </div>
     </header>
