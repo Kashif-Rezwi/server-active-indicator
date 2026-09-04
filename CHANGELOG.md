@@ -1,5 +1,11 @@
 # server-active-indicator
 
+## 0.3.1
+
+### Patch Changes
+
+- 5ef42e9: Redesign status icons for better legibility, refresh dark-mode color tokens, stabilize banner height across state variants, and polish the default status message copy.
+
 ## 0.3.0
 
 ### Minor Changes
