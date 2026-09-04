@@ -33,10 +33,10 @@ export interface ServerStatusProps extends MonitorConfig {
 
 /** Locked English defaults — research §5 copy for `waking` (never "asleep"). */
 const DEFAULT_MESSAGES: Required<ServerStatusMessages> = {
-  waking: "The server is starting up — this can take up to a minute on first visit.",
+  waking: "The server is starting up. This can take up to a minute on first visit.",
   active: "The server is ready.",
   offline: "The server appears to be unavailable.",
-  browserOffline: "You appear to be offline — check your connection.",
+  browserOffline: "You appear to be offline. Check your connection.",
   retry: "Retry",
 };
 

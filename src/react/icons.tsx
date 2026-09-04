@@ -2,7 +2,9 @@ import type { ReactNode } from "react";
 
 /**
  * Decorative inline status icons (AGENTS.md locked decision 7 — no icon library):
- * every icon is `aria-hidden` and sized `1em` to track `--sai-font-size`.
+ * every icon is `aria-hidden` and sized `1.25em` to have optical weight that reads
+ * clearly at banner font sizes. No circle wrappers — solid bold paths fill the
+ * viewBox directly so they feel proportional without being oversized.
  */
 
 export function SpinnerIcon(): ReactNode {
@@ -12,8 +14,8 @@ export function SpinnerIcon(): ReactNode {
     <svg
       className="sai-icon sai-spinner"
       viewBox="0 0 16 16"
-      width="1em"
-      height="1em"
+      width="1.25em"
+      height="1.25em"
       fill="none"
       aria-hidden="true"
       focusable="false"
@@ -21,32 +23,33 @@ export function SpinnerIcon(): ReactNode {
       <circle
         cx="8"
         cy="8"
-        r="6.25"
+        r="6"
         stroke="currentColor"
-        strokeWidth="2"
+        strokeWidth="2.25"
         strokeLinecap="round"
-        strokeDasharray="29.45 9.82"
+        strokeDasharray="27 10"
       />
     </svg>
   );
 }
 
 export function CheckIcon(): ReactNode {
+  // Bold standalone checkmark — no circle; the tick alone reads as "success"
+  // and has far more visual mass than a circle-outline variant at small sizes.
   return (
     <svg
       className="sai-icon"
       viewBox="0 0 16 16"
-      width="1em"
-      height="1em"
+      width="1.25em"
+      height="1.25em"
       fill="none"
       aria-hidden="true"
       focusable="false"
     >
-      <circle cx="8" cy="8" r="6.25" stroke="currentColor" strokeWidth="2" />
       <path
-        d="M5.2 8.3l1.9 1.9 3.7-4.2"
+        d="M2.5 8.5L6.5 12.5L13.5 4"
         stroke="currentColor"
-        strokeWidth="2"
+        strokeWidth="2.25"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
@@ -55,22 +58,21 @@ export function CheckIcon(): ReactNode {
 }
 
 export function OfflineIcon(): ReactNode {
-  // X-circle: the backend could not be reached.
+  // Bold X — no circle; stands confidently as an error mark.
   return (
     <svg
       className="sai-icon"
       viewBox="0 0 16 16"
-      width="1em"
-      height="1em"
+      width="1.25em"
+      height="1.25em"
       fill="none"
       aria-hidden="true"
       focusable="false"
     >
-      <circle cx="8" cy="8" r="6.25" stroke="currentColor" strokeWidth="2" />
       <path
-        d="M5.9 5.9l4.2 4.2m0-4.2l-4.2 4.2"
+        d="M3.5 3.5L12.5 12.5M12.5 3.5L3.5 12.5"
         stroke="currentColor"
-        strokeWidth="2"
+        strokeWidth="2.25"
         strokeLinecap="round"
       />
     </svg>
@@ -78,21 +80,31 @@ export function OfflineIcon(): ReactNode {
 }
 
 export function WifiOffIcon(): ReactNode {
-  // WiFi arcs + dot with a slash: the browser itself is offline.
+  // WiFi arcs + dot with a diagonal slash: the browser itself is offline.
   return (
     <svg
       className="sai-icon"
       viewBox="0 0 16 16"
-      width="1em"
-      height="1em"
+      width="1.25em"
+      height="1.25em"
       fill="none"
       aria-hidden="true"
       focusable="false"
     >
-      <path d="M2.8 6.6a7.5 7.5 0 0 1 10.4 0" stroke="currentColor" strokeWidth="1.75" />
-      <path d="M5.2 9.1a4.2 4.2 0 0 1 5.6 0" stroke="currentColor" strokeWidth="1.75" />
-      <circle cx="8" cy="11.6" r="1" fill="currentColor" />
-      <path d="M2.5 13.5L13.5 2.5" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
+      <path
+        d="M2.5 6.2a8 8 0 0 1 11 0"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+      <path
+        d="M5 9a4.5 4.5 0 0 1 6 0"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+      <circle cx="8" cy="12" r="1.25" fill="currentColor" />
+      <path d="M2 14L14 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
     </svg>
   );
 }

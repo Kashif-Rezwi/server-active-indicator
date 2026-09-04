@@ -23,16 +23,16 @@ export const STYLES = `
 }
 @media (prefers-color-scheme: dark) {
   :where(:root) {
-    --sai-waking-bg: rgba(120, 53, 15, 0.35);
-    --sai-waking-border: rgba(251, 191, 36, 0.25);
+    --sai-waking-bg: #3d1f00;
+    --sai-waking-border: #92400e;
     --sai-waking-text: #fcd34d;
     --sai-waking-accent: #fbbf24;
-    --sai-active-bg: rgba(20, 83, 45, 0.35);
-    --sai-active-border: rgba(74, 222, 128, 0.25);
+    --sai-active-bg: #052e16;
+    --sai-active-border: #166534;
     --sai-active-text: #86efac;
     --sai-active-accent: #4ade80;
-    --sai-offline-bg: rgba(127, 29, 29, 0.35);
-    --sai-offline-border: rgba(248, 113, 113, 0.25);
+    --sai-offline-bg: #3b0d0d;
+    --sai-offline-border: #7f1d1d;
     --sai-offline-text: #fca5a5;
     --sai-offline-accent: #f87171;
   }
@@ -56,8 +56,12 @@ export const STYLES = `
     color 300ms ease;
 }
 .sai-banner {
+  /* nowrap keeps all state variants (icon + msg + elapsed/retry) on one line */
+  flex-wrap: nowrap;
   width: 100%;
-  padding: 0.5rem 1rem;
+  /* fixed height so waking/active/offline banners are always the same strip */
+  min-height: 2.5rem;
+  padding: 0 1rem;
   border-bottom: 1px solid transparent;
 }
 .sai-pill {
@@ -90,6 +94,7 @@ export const STYLES = `
 }
 .sai-icon {
   flex-shrink: 0;
+  vertical-align: middle;
   color: var(--sai-icon-color, currentColor);
 }
 .sai-spinner {
@@ -110,13 +115,15 @@ export const STYLES = `
 }
 .sai-retry {
   box-sizing: border-box;
+  /* line-height: 1 + block padding collapses the button to match inline text height */
+  line-height: 1;
   font: inherit;
   font-weight: 600;
   color: inherit;
   background: transparent;
   border: 1px solid currentColor;
   border-radius: 0.375rem;
-  padding: 0.125rem 0.625rem;
+  padding: 0.2em 0.625rem;
   cursor: pointer;
 }
 .sai-retry:hover {

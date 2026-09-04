@@ -12,7 +12,7 @@
 - **Accessible out of the box** — `role="status"`, dark mode, reduced motion, themeable via CSS custom properties.
 - **Modern runtimes** — requires `AbortSignal.timeout`/`AbortSignal.any` (all evergreen browsers since 2023–24; Node ≥ 20.3 for SSR health checks).
 
-![Demo: the indicator appears while a cold backend starts up, then confirms and disappears](https://raw.githubusercontent.com/Kashif-Rezwi/server-active-indicator/main/docs/assets/demo.gif)
+![Demo: the indicator appears while a cold backend starts up, confirms it is ready, then disappears — shown in both dark and light themes](https://raw.githubusercontent.com/Kashif-Rezwi/server-active-indicator/main/docs/assets/demo.gif)
 
 ---
 
@@ -20,7 +20,7 @@
 
 Free-tier hosts (Render, Railway, Fly.io, Koyeb) spin your backend down after a few minutes without traffic. The next visitor's browser gets your frontend instantly — but the first API request hangs for up to a minute while the service wakes. Nothing on screen explains why. Users assume your app is broken and leave.
 
-`server-active-indicator` watches a lightweight `/health` endpoint and, only when a request is taking suspiciously long, shows a calm, honest message: _"The server is starting up — this can take up to a minute on first visit."_ When the backend responds, it confirms briefly and disappears.
+`server-active-indicator` watches a lightweight `/health` endpoint and, only when a request is taking suspiciously long, shows a calm, honest message: _"The server is starting up. This can take up to a minute on first visit."_ When the backend responds, it confirms briefly and disappears.
 
 **When the backend is warm, it renders nothing. Silence on success is the product.**
 
