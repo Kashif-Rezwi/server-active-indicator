@@ -1,16 +1,7 @@
 import { useState } from "react";
 import type { ServerStatusMessages } from "server-active-indicator/react";
 import type { SimulatedBackendHandle } from "../simulation/types";
-import {
-  AlertTriangleIcon,
-  CheckIcon,
-  CodeIcon,
-  GlobeIcon,
-  SlidersIcon,
-  SnowflakeIcon,
-  WifiOffIcon,
-  ZapIcon,
-} from "./Icons";
+import { AlertTriangleIcon, ChevronDownIcon, SnowflakeIcon, WifiOffIcon, ZapIcon } from "./Icons";
 
 export interface DemoIndicatorConfig {
   variant: "banner" | "pill";
@@ -23,15 +14,11 @@ export interface DemoIndicatorConfig {
   messages: ServerStatusMessages;
 }
 
-export type ControlTab = "options" | "i18n" | "code";
-
 interface ControlPanelProps {
   config: DemoIndicatorConfig;
   onConfigChange: (patch: Partial<DemoIndicatorConfig>) => void;
   backend: SimulatedBackendHandle;
   onRemountRequired: () => void;
-  activeTab: ControlTab;
-  onTabChange: (tab: ControlTab) => void;
 }
 
 export function ControlPanel({
@@ -39,11 +26,9 @@ export function ControlPanel({
   onConfigChange,
   backend,
   onRemountRequired,
-  activeTab,
-  onTabChange,
 }: ControlPanelProps) {
-  const [copied, setCopied] = useState(false);
-  const [codeType, setCodeType] = useState<"react" | "vanilla">("react");
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showCopy, setShowCopy] = useState(false);
 
   const handleScenarioClick = (action: () => void) => {
     action();
@@ -64,85 +49,9 @@ export function ControlPanel({
     });
   };
 
-  const generateReactCode = () => {
-    const props: string[] = ['healthUrl="https://api.example.com/health"'];
-    if (config.variant !== "banner") props.push(`variant="${config.variant}"`);
-    if (config.revealDelay !== 3000) props.push(`revealDelay={${config.revealDelay}}`);
-    if (config.pollInterval !== 5000) props.push(`pollInterval={${config.pollInterval}}`);
-    if (config.offlineAfter !== 60000) props.push(`offlineAfter={${config.offlineAfter}}`);
-    if (config.successDisplayMs !== 2500)
-      props.push(`successDisplayMs={${config.successDisplayMs}}`);
-
-    const hasMessages = Object.values(config.messages).some(Boolean);
-    if (hasMessages) {
-      props.push(`messages={${JSON.stringify(config.messages, null, 2)}}`);
-    }
-
-    if (config.useRenderProp) {
-      return `import { ServerStatus } from "server-active-indicator/react";
-
-export function App() {
-  return (
-    <ServerStatus
-      ${props.join("\n      ")}
-    >
-      {({ status, elapsedSeconds, refresh }) => (
-        status === "waking" ? (
-          <div className="custom-banner">
-            Waking up... ({elapsedSeconds}s)
-          </div>
-        ) : null
-      )}
-    </ServerStatus>
-  );
-}`;
-    }
-
-    return `import { ServerStatus } from "server-active-indicator/react";
-
-export function App() {
-  return (
-    <ServerStatus
-      ${props.join("\n      ")}
-    />
-  );
-}`;
-  };
-
-  const generateVanillaCode = () => {
-    return `import { createMonitor } from "server-active-indicator";
-
-const monitor = createMonitor({
-  healthUrl: "https://api.example.com/health",
-  revealDelay: ${config.revealDelay},
-  pollInterval: ${config.pollInterval},
-  offlineAfter: ${config.offlineAfter},
-});
-
-const unsubscribe = monitor.subscribe(({ status, elapsedSeconds }) => {
-  console.log("Server status:", status, "Elapsed:", elapsedSeconds);
-  if (status === "waking") {
-    // Show custom waking UI
-  } else if (status === "active") {
-    // Backend is ready
-  }
-});
-
-// Teardown when component/page unmounts:
-// unsubscribe();
-// monitor.destroy();`;
-  };
-
-  const handleCopyCode = async () => {
-    const text = codeType === "react" ? generateReactCode() : generateVanillaCode();
-    await navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
   return (
     <div className="demo-sidebar">
-      {/* 1. Dedicated Simulation Card */}
+      {/* 1. Backend Simulation Card */}
       <div className="control-card">
         <div className="card-title-bar">
           <span className="card-title-heading">Backend Simulation</span>
@@ -161,9 +70,7 @@ const unsubscribe = monitor.subscribe(({ status, elapsedSeconds }) => {
                 </span>
                 <span className="scenario-title">Cold Start</span>
               </div>
-              <span className="scenario-desc">
-                Simulates sleeping host waking up with countdown.
-              </span>
+              <span className="scenario-desc">Sleeping backend wakes with countdown.</span>
             </button>
 
             <button
@@ -177,7 +84,7 @@ const unsubscribe = monitor.subscribe(({ status, elapsedSeconds }) => {
                 </span>
                 <span className="scenario-title">Warm Start</span>
               </div>
-              <span className="scenario-desc">Instant 200 OK. Completely silent on success.</span>
+              <span className="scenario-desc">Fast 200 OK. Completely silent UI.</span>
             </button>
 
             <button
@@ -191,7 +98,7 @@ const unsubscribe = monitor.subscribe(({ status, elapsedSeconds }) => {
                 </span>
                 <span className="scenario-title">Server 503</span>
               </div>
-              <span className="scenario-desc">Host failure. Shows offline banner + Retry.</span>
+              <span className="scenario-desc">Host failure with Retry button.</span>
             </button>
 
             <button
@@ -205,9 +112,7 @@ const unsubscribe = monitor.subscribe(({ status, elapsedSeconds }) => {
                 </span>
                 <span className="scenario-title">Client Offline</span>
               </div>
-              <span className="scenario-desc">
-                Network disconnected. Auto-recovers on reconnect.
-              </span>
+              <span className="scenario-desc">Browser connection lost; auto-recovers.</span>
             </button>
           </div>
 
@@ -245,277 +150,239 @@ const unsubscribe = monitor.subscribe(({ status, elapsedSeconds }) => {
         </div>
       </div>
 
-      {/* 2. Indicator Configuration & Code Export Card */}
+      {/* 2. Indicator Configuration (Single Natural Flow with Progressive Disclosure) */}
       <div className="control-card">
-        <div className="control-tabs">
-          <button
-            type="button"
-            className={`tab-btn ${activeTab === "options" ? "active" : ""}`}
-            onClick={() => onTabChange("options")}
-          >
-            <SlidersIcon />
-            <span>Options</span>
-          </button>
-          <button
-            type="button"
-            className={`tab-btn ${activeTab === "i18n" ? "active" : ""}`}
-            onClick={() => onTabChange("i18n")}
-          >
-            <GlobeIcon />
-            <span>Copy & i18n</span>
-          </button>
-          <button
-            type="button"
-            className={`tab-btn ${activeTab === "code" ? "active" : ""}`}
-            onClick={() => onTabChange("code")}
-          >
-            <CodeIcon />
-            <span>Generated Code</span>
-          </button>
+        <div className="card-title-bar">
+          <span className="card-title-heading">Indicator Options</span>
         </div>
 
         <div className="card-body">
-          {/* Options Tab */}
-          {activeTab === "options" && (
-            <>
-              <div className="control-group">
-                <div className="control-label-row">
-                  <span>Visual Variant</span>
-                </div>
-                <div className="segmented-control">
-                  <button
-                    type="button"
-                    className={`segment-btn ${config.variant === "banner" ? "active" : ""}`}
-                    onClick={() => onConfigChange({ variant: "banner" })}
-                  >
-                    Banner
-                  </button>
-                  <button
-                    type="button"
-                    className={`segment-btn ${config.variant === "pill" ? "active" : ""}`}
-                    onClick={() => onConfigChange({ variant: "pill" })}
-                  >
-                    Pill
-                  </button>
-                </div>
-              </div>
-
-              <div className="control-group">
-                <div className="control-label-row">
-                  <span>Placement In Layout</span>
-                </div>
-                <select
-                  className="select-input"
-                  value={config.position}
-                  onChange={(e) =>
-                    onConfigChange({
-                      position: e.target.value as DemoIndicatorConfig["position"],
-                    })
-                  }
-                >
-                  <option value="top-bar">Fixed Top of Page</option>
-                  <option value="inside-header">Embedded Above App Card</option>
-                  <option value="floating-bottom">Floating Bottom-Right Badge</option>
-                </select>
-              </div>
-
-              <div className="control-group">
-                <div className="control-label-row">
-                  <span>Reveal Delay (revealDelay)</span>
-                  <span className="control-val-badge">{config.revealDelay / 1000}s</span>
-                </div>
-                <input
-                  type="range"
-                  className="range-input"
-                  min="500"
-                  max="10000"
-                  step="500"
-                  value={config.revealDelay}
-                  onChange={(e) => handleTimingChange("revealDelay", Number(e.target.value))}
-                />
-                <span className="control-helper-text">
-                  Suppresses UI during fast responses so warm starts stay silent.
-                </span>
-              </div>
-
-              <div className="control-group">
-                <div className="control-label-row">
-                  <span>Poll Interval (pollInterval)</span>
-                  <span className="control-val-badge">{config.pollInterval / 1000}s</span>
-                </div>
-                <input
-                  type="range"
-                  className="range-input"
-                  min="1000"
-                  max="15000"
-                  step="500"
-                  value={config.pollInterval}
-                  onChange={(e) => handleTimingChange("pollInterval", Number(e.target.value))}
-                />
-              </div>
-
-              <div className="control-group">
-                <div className="control-label-row">
-                  <span>Offline Cutoff (offlineAfter)</span>
-                  <span className="control-val-badge">{config.offlineAfter / 1000}s</span>
-                </div>
-                <input
-                  type="range"
-                  className="range-input"
-                  min="10000"
-                  max="120000"
-                  step="5000"
-                  value={config.offlineAfter}
-                  onChange={(e) => handleTimingChange("offlineAfter", Number(e.target.value))}
-                />
-                <span className="control-helper-text">
-                  Maximum elapsed waking time before concluding the backend is offline.
-                </span>
-              </div>
-
-              <div className="control-group">
-                <div className="control-label-row">
-                  <span>Confirmation Duration (successDisplayMs)</span>
-                  <span className="control-val-badge">{config.successDisplayMs / 1000}s</span>
-                </div>
-                <input
-                  type="range"
-                  className="range-input"
-                  min="500"
-                  max="8000"
-                  step="500"
-                  value={config.successDisplayMs}
-                  onChange={(e) => onConfigChange({ successDisplayMs: Number(e.target.value) })}
-                />
-              </div>
-
-              <div className="control-group">
-                <label className="checkbox-label">
-                  <input
-                    type="checkbox"
-                    checked={config.useRenderProp}
-                    onChange={(e) => onConfigChange({ useRenderProp: e.target.checked })}
-                  />
-                  <span>
-                    Use custom render prop (<code>children=&#123;fn&#125;</code>)
-                  </span>
-                </label>
-              </div>
-            </>
-          )}
-
-          {/* Copy & i18n Tab */}
-          {activeTab === "i18n" && (
-            <>
-              <div className="control-group">
-                <label className="control-label-row">
-                  <span>Waking Message</span>
-                </label>
-                <input
-                  type="text"
-                  className="text-input"
-                  placeholder="The server is starting up — this can take up to a minute on first visit."
-                  value={config.messages.waking || ""}
-                  onChange={(e) => handleMessageChange("waking", e.target.value)}
-                />
-              </div>
-
-              <div className="control-group">
-                <label className="control-label-row">
-                  <span>Active / Ready Message</span>
-                </label>
-                <input
-                  type="text"
-                  className="text-input"
-                  placeholder="The server is ready."
-                  value={config.messages.active || ""}
-                  onChange={(e) => handleMessageChange("active", e.target.value)}
-                />
-              </div>
-
-              <div className="control-group">
-                <label className="control-label-row">
-                  <span>Server Offline Message</span>
-                </label>
-                <input
-                  type="text"
-                  className="text-input"
-                  placeholder="The server appears to be unavailable."
-                  value={config.messages.offline || ""}
-                  onChange={(e) => handleMessageChange("offline", e.target.value)}
-                />
-              </div>
-
-              <div className="control-group">
-                <label className="control-label-row">
-                  <span>Browser Offline Message</span>
-                </label>
-                <input
-                  type="text"
-                  className="text-input"
-                  placeholder="You appear to be offline — check your connection."
-                  value={config.messages.browserOffline || ""}
-                  onChange={(e) => handleMessageChange("browserOffline", e.target.value)}
-                />
-              </div>
-
-              <div className="control-group">
-                <label className="control-label-row">
-                  <span>Retry Button Label</span>
-                </label>
-                <input
-                  type="text"
-                  className="text-input"
-                  placeholder="Retry"
-                  value={config.messages.retry || ""}
-                  onChange={(e) => handleMessageChange("retry", e.target.value)}
-                />
-              </div>
-            </>
-          )}
-
-          {/* Generated Code Tab */}
-          {activeTab === "code" && (
-            <div>
-              <div className="code-header-row">
-                <span className="code-title">Integration Code</span>
-                <div className="segmented-control" style={{ maxWidth: 140 }}>
-                  <button
-                    type="button"
-                    className={`segment-btn ${codeType === "react" ? "active" : ""}`}
-                    onClick={() => setCodeType("react")}
-                  >
-                    React
-                  </button>
-                  <button
-                    type="button"
-                    className={`segment-btn ${codeType === "vanilla" ? "active" : ""}`}
-                    onClick={() => setCodeType("vanilla")}
-                  >
-                    JS Core
-                  </button>
-                </div>
-              </div>
-
-              <div className="code-snippet-box">
-                <button
-                  type="button"
-                  className="copy-code-btn"
-                  onClick={handleCopyCode}
-                  title="Copy code to clipboard"
-                >
-                  {copied ? (
-                    <>
-                      <CheckIcon /> Copied
-                    </>
-                  ) : (
-                    "Copy"
-                  )}
-                </button>
-                <pre>{codeType === "react" ? generateReactCode() : generateVanillaCode()}</pre>
-              </div>
+          {/* Tier 1: Primary Essentials */}
+          <div className="control-group">
+            <div className="control-label-row">
+              <span>Visual Variant</span>
             </div>
-          )}
+            <div className="segmented-control">
+              <button
+                type="button"
+                className={`segment-btn ${config.variant === "banner" ? "active" : ""}`}
+                onClick={() => onConfigChange({ variant: "banner" })}
+              >
+                Banner
+              </button>
+              <button
+                type="button"
+                className={`segment-btn ${config.variant === "pill" ? "active" : ""}`}
+                onClick={() => onConfigChange({ variant: "pill" })}
+              >
+                Pill
+              </button>
+            </div>
+          </div>
+
+          <div className="control-group">
+            <div className="control-label-row">
+              <span>Placement</span>
+            </div>
+            <select
+              className="select-input"
+              value={config.position}
+              onChange={(e) =>
+                onConfigChange({
+                  position: e.target.value as DemoIndicatorConfig["position"],
+                })
+              }
+            >
+              <option value="top-bar">Fixed Top of Page</option>
+              <option value="inside-header">Embedded Above App Card</option>
+              <option value="floating-bottom">Floating Bottom-Right Badge</option>
+            </select>
+          </div>
+
+          {/* Tier 2: Timing Thresholds */}
+          <div className="control-group">
+            <div className="control-label-row">
+              <span>Reveal Delay (revealDelay)</span>
+              <span className="control-val-badge">{config.revealDelay / 1000}s</span>
+            </div>
+            <input
+              type="range"
+              className="range-input"
+              min="500"
+              max="10000"
+              step="500"
+              value={config.revealDelay}
+              onChange={(e) => handleTimingChange("revealDelay", Number(e.target.value))}
+            />
+            <span className="control-helper-text">
+              Suppresses UI on fast responses so warm starts stay silent.
+            </span>
+          </div>
+
+          <div className="control-group">
+            <div className="control-label-row">
+              <span>Poll Interval (pollInterval)</span>
+              <span className="control-val-badge">{config.pollInterval / 1000}s</span>
+            </div>
+            <input
+              type="range"
+              className="range-input"
+              min="1000"
+              max="15000"
+              step="500"
+              value={config.pollInterval}
+              onChange={(e) => handleTimingChange("pollInterval", Number(e.target.value))}
+            />
+          </div>
+
+          {/* Tier 3: Advanced Options (Collapsible) */}
+          <div className="disclosure-section">
+            <button
+              type="button"
+              className="disclosure-trigger"
+              onClick={() => setShowAdvanced((prev) => !prev)}
+            >
+              <span>Advanced Policies</span>
+              <span className={`disclosure-chevron ${showAdvanced ? "open" : ""}`}>
+                <ChevronDownIcon />
+              </span>
+            </button>
+
+            {showAdvanced && (
+              <div className="disclosure-body">
+                <div className="control-group">
+                  <div className="control-label-row">
+                    <span>Offline Cutoff (offlineAfter)</span>
+                    <span className="control-val-badge">{config.offlineAfter / 1000}s</span>
+                  </div>
+                  <input
+                    type="range"
+                    className="range-input"
+                    min="10000"
+                    max="120000"
+                    step="5000"
+                    value={config.offlineAfter}
+                    onChange={(e) => handleTimingChange("offlineAfter", Number(e.target.value))}
+                  />
+                  <span className="control-helper-text">
+                    Max waking elapsed time before failing over to offline.
+                  </span>
+                </div>
+
+                <div className="control-group">
+                  <div className="control-label-row">
+                    <span>Active Toast Duration</span>
+                    <span className="control-val-badge">{config.successDisplayMs / 1000}s</span>
+                  </div>
+                  <input
+                    type="range"
+                    className="range-input"
+                    min="500"
+                    max="8000"
+                    step="500"
+                    value={config.successDisplayMs}
+                    onChange={(e) => onConfigChange({ successDisplayMs: Number(e.target.value) })}
+                  />
+                </div>
+
+                <div className="control-group">
+                  <label className="checkbox-label">
+                    <input
+                      type="checkbox"
+                      checked={config.useRenderProp}
+                      onChange={(e) => onConfigChange({ useRenderProp: e.target.checked })}
+                    />
+                    <span>
+                      Custom render prop (<code>children=&#123;fn&#125;</code>)
+                    </span>
+                  </label>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Tier 4: Copy & Localization (Collapsible) */}
+          <div className="disclosure-section">
+            <button
+              type="button"
+              className="disclosure-trigger"
+              onClick={() => setShowCopy((prev) => !prev)}
+            >
+              <span>Custom Text & i18n</span>
+              <span className={`disclosure-chevron ${showCopy ? "open" : ""}`}>
+                <ChevronDownIcon />
+              </span>
+            </button>
+
+            {showCopy && (
+              <div className="disclosure-body">
+                <div className="control-group">
+                  <label className="control-label-row">
+                    <span>Waking Message</span>
+                  </label>
+                  <input
+                    type="text"
+                    className="text-input"
+                    placeholder="The server is starting up..."
+                    value={config.messages.waking || ""}
+                    onChange={(e) => handleMessageChange("waking", e.target.value)}
+                  />
+                </div>
+
+                <div className="control-group">
+                  <label className="control-label-row">
+                    <span>Active Message</span>
+                  </label>
+                  <input
+                    type="text"
+                    className="text-input"
+                    placeholder="The server is ready."
+                    value={config.messages.active || ""}
+                    onChange={(e) => handleMessageChange("active", e.target.value)}
+                  />
+                </div>
+
+                <div className="control-group">
+                  <label className="control-label-row">
+                    <span>Offline Message</span>
+                  </label>
+                  <input
+                    type="text"
+                    className="text-input"
+                    placeholder="The server appears to be unavailable."
+                    value={config.messages.offline || ""}
+                    onChange={(e) => handleMessageChange("offline", e.target.value)}
+                  />
+                </div>
+
+                <div className="control-group">
+                  <label className="control-label-row">
+                    <span>Browser Offline Message</span>
+                  </label>
+                  <input
+                    type="text"
+                    className="text-input"
+                    placeholder="You appear to be offline..."
+                    value={config.messages.browserOffline || ""}
+                    onChange={(e) => handleMessageChange("browserOffline", e.target.value)}
+                  />
+                </div>
+
+                <div className="control-group">
+                  <label className="control-label-row">
+                    <span>Retry Label</span>
+                  </label>
+                  <input
+                    type="text"
+                    className="text-input"
+                    placeholder="Retry"
+                    value={config.messages.retry || ""}
+                    onChange={(e) => handleMessageChange("retry", e.target.value)}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

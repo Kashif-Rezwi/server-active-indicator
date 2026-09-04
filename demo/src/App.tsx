@@ -3,8 +3,9 @@ import { ServerStatus, ServerStatusProvider, useServerStatus } from "server-acti
 
 import { HeaderNav } from "./components/HeaderNav";
 import { PulseApp } from "./components/PulseApp";
-import { ControlPanel, type ControlTab, type DemoIndicatorConfig } from "./components/ControlPanel";
+import { ControlPanel, type DemoIndicatorConfig } from "./components/ControlPanel";
 import { LiveInspector } from "./components/LiveInspector";
+import { CodeExport } from "./components/CodeExport";
 import { useSimulatedBackend } from "./simulation/useSimulatedBackend";
 import type { SimulatedBackendHandle } from "./simulation/types";
 
@@ -71,8 +72,6 @@ interface DemoContentProps {
   config: DemoIndicatorConfig;
   onConfigChange: (patch: Partial<DemoIndicatorConfig>) => void;
   onRemount: () => void;
-  activeControlTab: ControlTab;
-  onTabChange: (tab: ControlTab) => void;
   events: Array<{ timestamp: string; state: string; details: string }>;
   onRecordEvent: (state: string, details: string) => void;
 }
@@ -82,8 +81,6 @@ function DemoContent({
   config,
   onConfigChange,
   onRemount,
-  activeControlTab,
-  onTabChange,
   events,
   onRecordEvent,
 }: DemoContentProps) {
@@ -124,7 +121,7 @@ function DemoContent({
 
       {/* Main 2-Column Grid */}
       <main className="demo-main-grid">
-        {/* Left Column: Pulse SaaS Application */}
+        {/* Left Column: Pulse SaaS App + Runtime Telemetry + Code Integration */}
         <section className="app-shell-container">
           {/* Embedded Indicator Slot */}
           {config.position === "inside-header" && (
@@ -140,20 +137,20 @@ function DemoContent({
               onRemount();
             }}
           />
+
+          <LiveInspector snapshot={snapshot} events={events} />
+
+          <CodeExport config={config} />
         </section>
 
-        {/* Right Column: Control Sidebar & Inspector */}
+        {/* Right Column: Control Sidebar (Simulation + Ranked Options) */}
         <aside className="demo-sidebar">
           <ControlPanel
             config={config}
             onConfigChange={onConfigChange}
             backend={backend}
             onRemountRequired={onRemount}
-            activeTab={activeControlTab}
-            onTabChange={onTabChange}
           />
-
-          <LiveInspector snapshot={snapshot} events={events} />
         </aside>
       </main>
 
@@ -171,7 +168,6 @@ export function App() {
   const backend = useSimulatedBackend();
   const [config, setConfig] = useState<DemoIndicatorConfig>(INITIAL_DEMO_CONFIG);
   const [sessionKey, setSessionKey] = useState(0);
-  const [activeControlTab, setActiveControlTab] = useState<ControlTab>("options");
   const [events, setEvents] = useState<
     Array<{ timestamp: string; state: string; details: string }>
   >([]);
@@ -209,8 +205,6 @@ export function App() {
           config={config}
           onConfigChange={handleConfigChange}
           onRemount={handleRemount}
-          activeControlTab={activeControlTab}
-          onTabChange={setActiveControlTab}
           events={events}
           onRecordEvent={recordEvent}
         />
