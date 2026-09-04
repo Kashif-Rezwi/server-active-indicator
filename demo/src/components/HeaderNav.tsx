@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTheme } from "../hooks/useTheme";
-import { CheckIcon, CopyIcon, GitHubIcon, MoonIcon, NpmIcon, SlidersIcon, SunIcon } from "./Icons";
+import { CheckIcon, CopyIcon, GitHubIcon, MoonIcon, NpmIcon, SettingsIcon, SunIcon } from "./Icons";
 
 interface HeaderNavProps {
   controlsOpen: boolean;
@@ -44,7 +44,8 @@ export function HeaderNav({ controlsOpen, onToggleControls }: HeaderNavProps) {
           </svg>
 
           <div className="brand-title">
-            <span>server-active-indicator</span>
+            <span className="brand-name-full">server-active-indicator</span>
+            <span className="brand-name-short">sai</span>
             <span className="brand-badge">v{__PKG_VERSION__}</span>
           </div>
         </div>
@@ -109,7 +110,7 @@ export function HeaderNav({ controlsOpen, onToggleControls }: HeaderNavProps) {
             aria-expanded={controlsOpen}
             aria-controls="demo-sidebar"
           >
-            <SlidersIcon width={20} height={20} />
+            <SettingsIcon width={20} height={20} />
           </button>
         </div>
       </div>
