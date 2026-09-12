@@ -2,7 +2,7 @@
 
 > **Purpose.** This is the single-file map of the entire repository: what the package is, how it is built, how every layer works, where every behavior lives, and which file to touch for any change. Everything here is sourced directly from the code (file + line references included) — if this document and the code disagree, the code wins and this file should be fixed.
 
-- **Package:** `server-active-indicator` v0.2.3 (npm, MIT) — [package.json](../package.json)
+- **Package:** `server-active-indicator` v0.3.2 (npm, MIT) — [package.json](../package.json)
 - **One-liner:** a tiny, framework-agnostic client-side status indicator for backends that sleep (free-tier cold starts). It shows an honest "server is starting up" banner only when a request is suspiciously slow, confirms briefly when the backend recovers, and renders **nothing at all** when the backend is warm.
 - **Repo:** https://github.com/Kashif-Rezwi/server-active-indicator
 - **Primary entry points:** `server-active-indicator` (framework-free core) and `server-active-indicator/react` (React adapter)
@@ -643,4 +643,4 @@ Further reading, in the order a new contributor should read it:
 
 ---
 
-_Created 2026-08-29 against commit `5a61c5f` (branch `develop`), `server-active-indicator@0.2.3`. Line numbers refer to the files as of that commit._
+_Created 2026-08-29 against commit `5a61c5f` (branch `develop`), updated for `server-active-indicator@0.3.2`. Line numbers refer to the files as of the corresponding release commit._
